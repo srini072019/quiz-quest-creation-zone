@@ -1,3 +1,4 @@
+
 import { 
   Table, 
   TableHeader, 
@@ -13,6 +14,8 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
+  ColumnFiltersState,
+  VisibilityState,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import {
@@ -50,7 +53,13 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { updateQuestion, deleteQuestion } = useQuestions();
+  const { updateQuestion, deleteQuestion, isLoading } = useQuestions();
+  
+  // Add missing state for table filtering and visibility
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState<string>("");
 
   const handleEdit = async (data: any) => {
     if (selectedQuestion) {
@@ -256,6 +265,7 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
             <QuestionForm
               subjects={subjects}
               onSubmit={handleEdit}
+              isSubmitting={isLoading}
               initialData={{
                 text: selectedQuestion.text,
                 type: selectedQuestion.type,
