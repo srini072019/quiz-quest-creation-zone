@@ -46,10 +46,13 @@ const QuestionTable = ({ questions: initialQuestions, subjects }: QuestionTableP
 
   const handleDeleteQuestion = async (question: Question) => {
     if (confirm("Are you sure you want to delete this question?")) {
-      await deleteQuestion(question.id);
-      setQuestions(prevQuestions => 
-        prevQuestions.filter(q => q.id !== question.id)
-      );
+      const success = await deleteQuestion(question.id);
+      if (success) {
+        // Update local state only if the API call was successful
+        setQuestions(prevQuestions => 
+          prevQuestions.filter(q => q.id !== question.id)
+        );
+      }
     }
   };
 

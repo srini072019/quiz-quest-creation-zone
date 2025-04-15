@@ -1,14 +1,16 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, FileSpreadsheet, Upload } from "lucide-react";
+import { AlertCircle, FileSpreadsheet, Upload, Download } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { read, utils } from "xlsx";
+import { read, utils, write } from "xlsx";
 import { Subject } from "@/types/subject.types";
 import { toast } from "sonner";
 import { DifficultyLevel, QuestionFormData, QuestionType } from "@/types/question.types";
 import { Progress } from "@/components/ui/progress";
 import { v4 as uuidv4 } from "uuid";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ImportQuestionsDialogProps {
   open: boolean;
@@ -27,6 +29,7 @@ interface SpreadsheetQuestion {
   "Option 4"?: string;
   "Correct Option"?: string | number;
   "Difficulty Level"?: string | number;
+  "Explanation"?: string;
 }
 
 const ImportQuestionsDialog = ({ 
@@ -39,11 +42,13 @@ const ImportQuestionsDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [parsedQuestions, setParsedQuestions] = useState<QuestionFormData[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("upload");
   
   const resetState = () => {
     setError(null);
     setProgress(0);
     setParsedQuestions([]);
+    setActiveTab("upload");
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -237,7 +242,8 @@ const ImportQuestionsDialog = ({
       type: questionType,
       subjectId: subject.id,
       difficultyLevel,
-      options
+      options,
+      explanation: row["Explanation"] ? String(row["Explanation"]) : undefined
     };
   };
 
@@ -256,6 +262,53 @@ const ImportQuestionsDialog = ({
       setIsLoading(false);
     }
   };
+
+  const downloadTemplate = () => {
+    // Create template data
+    const templateData = [
+      {
+        "Subject": "Example Subject Name",
+        "Question Type": "multiple_choice", // or "true_false" or "multiple_answer"
+        "Question Text": "What is the capital of France?",
+        "Option 1": "Paris",
+        "Option 2": "London",
+        "Option 3": "Berlin",
+        "Option 4": "Madrid",
+        "Correct Option": 1, // can be 1, 2, 3, 4 or the actual text of the option
+        "Difficulty Level": "easy", // or "medium" or "hard" or 1, 2, 3
+        "Explanation": "Paris is the capital and most populous city of France."
+      },
+      {
+        "Subject": "Example Subject Name",
+        "Question Type": "true_false",
+        "Question Text": "The Earth is flat.",
+        "Option 1": "True",
+        "Option 2": "False",
+        "Correct Option": "False",
+        "Difficulty Level": "easy",
+        "Explanation": "The Earth is approximately spherical in shape."
+      }
+    ];
+    
+    // Create worksheet
+    const ws = utils.json_to_sheet(templateData);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, "Template");
+    
+    // Generate and download
+    const buf = write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([buf], { type: "application/octet-stream" });
+    
+    // Create download link
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "questions_import_template.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -263,81 +316,128 @@ const ImportQuestionsDialog = ({
         <DialogHeader>
           <DialogTitle>Import Questions</DialogTitle>
           <DialogDescription>
-            Upload a spreadsheet with your questions. The first row should contain the headers.
+            Upload a spreadsheet with your questions or download a template to get started.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="upload">Upload</TabsTrigger>
+            <TabsTrigger value="template">Template</TabsTrigger>
+          </TabsList>
           
-          {parsedQuestions.length === 0 ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-center w-full">
-                <label htmlFor="spreadsheet-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <FileSpreadsheet className="w-10 h-10 mb-3 text-gray-400" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">XLSX or CSV (Excel spreadsheet)</p>
-                  </div>
-                  <input 
-                    id="spreadsheet-upload" 
-                    type="file" 
-                    className="hidden" 
-                    accept=".xlsx,.xls,.csv" 
-                    onChange={handleFileUpload}
-                    disabled={isLoading}
-                  />
-                </label>
-              </div>
-              
-              {isLoading && (
-                <div className="space-y-2">
-                  <Progress value={progress} className="w-full" />
-                  <p className="text-sm text-center text-muted-foreground">Processing file...</p>
+          <TabsContent value="upload" className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            {parsedQuestions.length === 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-center w-full">
+                  <label htmlFor="spreadsheet-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <FileSpreadsheet className="w-10 h-10 mb-3 text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500">
+                        <span className="font-semibold">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">XLSX or CSV (Excel spreadsheet)</p>
+                    </div>
+                    <input 
+                      id="spreadsheet-upload" 
+                      type="file" 
+                      className="hidden" 
+                      accept=".xlsx,.xls,.csv" 
+                      onChange={handleFileUpload}
+                      disabled={isLoading}
+                    />
+                  </label>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-md">
-                <p className="font-medium">Preview:</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {parsedQuestions.length} questions found in the spreadsheet.
-                </p>
-                <ul className="mt-2 text-sm list-disc pl-5">
-                  {parsedQuestions.slice(0, 3).map((q, idx) => (
-                    <li key={idx} className="truncate">
-                      {q.text.substring(0, 50)}{q.text.length > 50 ? "..." : ""}
-                    </li>
-                  ))}
-                  {parsedQuestions.length > 3 && (
-                    <li className="italic">And {parsedQuestions.length - 3} more...</li>
-                  )}
-                </ul>
+                
+                {isLoading && (
+                  <div className="space-y-2">
+                    <Progress value={progress} className="w-full" />
+                    <p className="text-sm text-center text-muted-foreground">Processing file...</p>
+                  </div>
+                )}
+
+                <div className="text-center">
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab("template")}>
+                    Need a template? Click here
+                  </Button>
+                </div>
               </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => resetState()}>
-                  Change File
-                </Button>
-                <Button 
-                  onClick={handleImport}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Importing..." : "Import Questions"}
-                </Button>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-md">
+                  <p className="font-medium">Preview:</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {parsedQuestions.length} questions found in the spreadsheet.
+                  </p>
+                  <ul className="mt-2 text-sm list-disc pl-5">
+                    {parsedQuestions.slice(0, 3).map((q, idx) => (
+                      <li key={idx} className="truncate">
+                        {q.text.substring(0, 50)}{q.text.length > 50 ? "..." : ""}
+                      </li>
+                    ))}
+                    {parsedQuestions.length > 3 && (
+                      <li className="italic">And {parsedQuestions.length - 3} more...</li>
+                    )}
+                  </ul>
+                </div>
+                
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => resetState()}>
+                    Change File
+                  </Button>
+                  <Button 
+                    onClick={handleImport}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Importing..." : "Import Questions"}
+                  </Button>
+                </div>
               </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="template" className="space-y-4">
+            <div className="p-4 bg-muted rounded-md">
+              <h3 className="font-medium mb-2">Template Format</h3>
+              <p className="text-sm mb-3">
+                Your spreadsheet should include these columns:
+              </p>
+              <ul className="text-sm list-disc pl-5 space-y-1">
+                <li><strong>Subject</strong>: Must match an existing subject name exactly</li>
+                <li><strong>Question Type</strong>: "multiple_choice", "true_false", or "multiple_answer"</li>
+                <li><strong>Question Text</strong>: The actual question</li>
+                <li><strong>Option 1-4</strong>: Possible answers</li>
+                <li><strong>Correct Option</strong>: Number (1-4) or the text of the correct option</li> 
+                <li><strong>Difficulty Level</strong>: "easy", "medium", "hard" (or 1, 2, 3)</li>
+                <li><strong>Explanation</strong>: Optional explanation for the answer</li>
+              </ul>
             </div>
-          )}
-        </div>
+            
+            <div className="flex justify-center">
+              <Button 
+                onClick={downloadTemplate}
+                className="flex items-center gap-2"
+              >
+                <Download size={16} />
+                Download Template
+              </Button>
+            </div>
+            
+            <div className="text-center mt-4">
+              <Button variant="outline" size="sm" onClick={() => setActiveTab("upload")}>
+                Back to Upload
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

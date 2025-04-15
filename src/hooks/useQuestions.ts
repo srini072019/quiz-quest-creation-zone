@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Question, QuestionFormData, QuestionType, DifficultyLevel, QuestionOption } from "@/types/question.types";
+import { Question, QuestionFormData, QuestionType, DifficultyLevel } from "@/types/question.types";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useQuestions = (subjectId?: string) => {
@@ -32,7 +33,7 @@ export const useQuestions = (subjectId?: string) => {
         options: question.question_options.map((option: any) => ({
           id: option.id,
           text: option.text,
-          isCorrect: option.is_correct // Transform is_correct to isCorrect
+          isCorrect: option.is_correct
         })),
         subjectId: question.subject_id,
         difficultyLevel: question.difficulty_level as DifficultyLevel,
@@ -82,7 +83,21 @@ export const useQuestions = (subjectId?: string) => {
 
       if (optionsError) throw optionsError;
 
-      await fetchQuestions();
+      // Update local state with the new question
+      const newQuestion: Question = {
+        id: questionData.id,
+        text: questionData.text,
+        type: questionData.type,
+        subjectId: questionData.subject_id,
+        difficultyLevel: questionData.difficulty_level,
+        explanation: questionData.explanation || "",
+        createdAt: new Date(questionData.created_at),
+        updatedAt: new Date(questionData.updated_at),
+        options: data.options
+      };
+      
+      setQuestions(prev => [...prev, newQuestion]);
+      
       toast.success("Question created successfully");
       return true;
     } catch (error) {
@@ -133,7 +148,22 @@ export const useQuestions = (subjectId?: string) => {
 
       if (insertOptionsError) throw insertOptionsError;
 
-      await fetchQuestions();
+      // Update the local state
+      setQuestions(prev => 
+        prev.map(q => 
+          q.id === id ? {
+            ...q,
+            text: data.text,
+            type: data.type,
+            subjectId: data.subjectId,
+            difficultyLevel: data.difficultyLevel,
+            explanation: data.explanation || "",
+            options: data.options,
+            updatedAt: new Date()
+          } : q
+        )
+      );
+
       toast.success("Question updated successfully");
       return true;
     } catch (error) {
@@ -164,7 +194,9 @@ export const useQuestions = (subjectId?: string) => {
 
       if (questionError) throw questionError;
 
-      await fetchQuestions();
+      // Update local state
+      setQuestions(prev => prev.filter(q => q.id !== id));
+      
       toast.success("Question deleted successfully");
       return true;
     } catch (error) {

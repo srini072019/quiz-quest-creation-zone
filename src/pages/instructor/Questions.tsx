@@ -1,18 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Upload } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import InstructorLayout from "@/layouts/InstructorLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { useSubjects } from "@/hooks/useSubjects";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { 
   Dialog, 
   DialogContent, 
@@ -31,18 +23,17 @@ import { toast } from "sonner";
 import { QuestionFormData } from "@/types/question.types";
 
 const QuestionsPage = () => {
-  console.log("Rendering Questions Page");
   const { subjects, fetchSubjects } = useSubjects();
-  const { questions, createQuestion, isLoading } = useQuestions();
+  const { questions, createQuestion, isLoading, fetchQuestions } = useQuestions();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterSubject, setFilterSubject] = useState<string>("");
   const [currentTab, setCurrentTab] = useState<string>("all");
   const [importLoading, setImportLoading] = useState(false);
 
   useEffect(() => {
     fetchSubjects();
+    // Ensure questions are fetched when the component mounts
+    fetchQuestions();
   }, []);
 
   const handleCreateQuestion = async (data: any) => {
@@ -73,6 +64,8 @@ const QuestionsPage = () => {
         toast.success(`Successfully imported ${successCount} questions`);
       }
       
+      // Refresh the questions list after import
+      fetchQuestions();
       return Promise.resolve();
     } catch (error) {
       console.error("Error in batch import:", error);
@@ -82,16 +75,6 @@ const QuestionsPage = () => {
       setImportLoading(false);
     }
   };
-
-  const filteredQuestions = questions.filter(question => {
-    const matchesSearch = searchQuery === "" || 
-                         question.text.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = filterSubject === "" || question.subjectId === filterSubject;
-    
-    if (currentTab === "all") return matchesSearch && matchesSubject;
-    
-    return matchesSearch && matchesSubject;
-  });
 
   return (
     <InstructorLayout>
@@ -148,39 +131,8 @@ const QuestionsPage = () => {
             </Tabs>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-grow">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search questions..."
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="w-full md:w-72">
-                <Select value={filterSubject} onValueChange={setFilterSubject}>
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <Filter size={16} />
-                      <SelectValue placeholder="Filter by subject" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all-subjects">All Subjects</SelectItem>
-                    {subjects.map(subject => (
-                      <SelectItem key={subject.id} value={subject.id}>
-                        {subject.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <QuestionTable questions={filteredQuestions} subjects={subjects} />
+            {/* Table with built-in search and filter */}
+            <QuestionTable questions={questions} subjects={subjects} />
           </CardContent>
         </Card>
       </div>
