@@ -17,7 +17,7 @@ import {
   ColumnFiltersState,
   VisibilityState,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,13 +53,19 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { updateQuestion, deleteQuestion, isLoading } = useQuestions();
+  const { updateQuestion, deleteQuestion, isLoading, fetchQuestions } = useQuestions();
   
-  // Add missing state for table filtering and visibility
+  // Add state for table filtering and visibility
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState<string>("");
+  const [tableQuestions, setTableQuestions] = useState<Question[]>(questions);
+
+  // Update the local state when questions prop changes
+  useEffect(() => {
+    setTableQuestions(questions);
+  }, [questions]);
 
   const handleEdit = async (data: any) => {
     if (selectedQuestion) {
@@ -67,6 +73,7 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
       setIsEditOpen(false);
       setSelectedQuestion(null);
       toast.success("Question updated successfully");
+      await fetchQuestions();
     }
   };
 
@@ -76,6 +83,11 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
       setIsDeleteDialogOpen(false);
       setSelectedQuestion(null);
       toast.success("Question deleted successfully");
+      
+      // Update local state after deletion
+      setTableQuestions(prevQuestions => 
+        prevQuestions.filter(q => q.id !== selectedQuestion.id)
+      );
     }
   };
 
@@ -177,7 +189,7 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
   ];
 
   const table = useReactTable({
-    data: questions,
+    data: tableQuestions,
     columns,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),

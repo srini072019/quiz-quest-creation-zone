@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Question, QuestionType } from "@/types/question.types";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -14,6 +14,11 @@ interface QuestionPreviewProps {
 const QuestionPreview = ({ question }: QuestionPreviewProps) => {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   
+  // Reset selected options when question changes
+  useEffect(() => {
+    setSelectedOptions([]);
+  }, [question]);
+  
   const handleSingleOptionChange = (value: string) => {
     setSelectedOptions([value]);
   };
@@ -27,7 +32,7 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
   };
 
   const handleCheckAnswer = () => {
-    // This is just a preview, so we'll show the correct answers
+    // Show the correct answers
     const correctOptions = question.options
       .filter(option => option.isCorrect)
       .map(option => option.id);
@@ -49,45 +54,53 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
                 value={selectedOptions[0] || ""} 
                 onValueChange={handleSingleOptionChange}
               >
-                {question.options.map((option) => (
-                  <div 
-                    key={option.id} 
-                    className={`flex items-center space-x-2 p-2 rounded ${
-                      selectedOptions.includes(option.id) && option.isCorrect 
-                        ? "bg-green-50 border border-green-200" 
-                        : selectedOptions.includes(option.id) && !option.isCorrect
-                        ? "bg-red-50 border border-red-200"
-                        : ""
-                    }`}
-                  >
-                    <RadioGroupItem value={option.id} id={option.id} />
-                    <Label htmlFor={option.id}>{option.text}</Label>
-                  </div>
-                ))}
+                {question.options && question.options.length > 0 ? (
+                  question.options.map((option) => (
+                    <div 
+                      key={option.id} 
+                      className={`flex items-center space-x-2 p-2 rounded ${
+                        selectedOptions.includes(option.id) && option.isCorrect 
+                          ? "bg-green-50 border border-green-200" 
+                          : selectedOptions.includes(option.id) && !option.isCorrect
+                          ? "bg-red-50 border border-red-200"
+                          : ""
+                      }`}
+                    >
+                      <RadioGroupItem value={option.id} id={option.id} />
+                      <Label htmlFor={option.id}>{option.text}</Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500">No options available</div>
+                )}
               </RadioGroup>
             )}
 
             {question.type === QuestionType.MULTIPLE_ANSWER && (
               <div className="space-y-2">
-                {question.options.map((option) => (
-                  <div 
-                    key={option.id} 
-                    className={`flex items-center space-x-2 p-2 rounded ${
-                      selectedOptions.includes(option.id) && option.isCorrect 
-                        ? "bg-green-50 border border-green-200" 
-                        : selectedOptions.includes(option.id) && !option.isCorrect
-                        ? "bg-red-50 border border-red-200"
-                        : ""
-                    }`}
-                  >
-                    <Checkbox 
-                      id={option.id} 
-                      checked={selectedOptions.includes(option.id)}
-                      onCheckedChange={() => handleMultipleOptionChange(option.id)}
-                    />
-                    <Label htmlFor={option.id}>{option.text}</Label>
-                  </div>
-                ))}
+                {question.options && question.options.length > 0 ? (
+                  question.options.map((option) => (
+                    <div 
+                      key={option.id} 
+                      className={`flex items-center space-x-2 p-2 rounded ${
+                        selectedOptions.includes(option.id) && option.isCorrect 
+                          ? "bg-green-50 border border-green-200" 
+                          : selectedOptions.includes(option.id) && !option.isCorrect
+                          ? "bg-red-50 border border-red-200"
+                          : ""
+                      }`}
+                    >
+                      <Checkbox 
+                        id={option.id} 
+                        checked={selectedOptions.includes(option.id)}
+                        onCheckedChange={() => handleMultipleOptionChange(option.id)}
+                      />
+                      <Label htmlFor={option.id}>{option.text}</Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500">No options available</div>
+                )}
               </div>
             )}
 
@@ -96,21 +109,25 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
                 value={selectedOptions[0] || ""} 
                 onValueChange={handleSingleOptionChange}
               >
-                {question.options.map((option) => (
-                  <div 
-                    key={option.id} 
-                    className={`flex items-center space-x-2 p-2 rounded ${
-                      selectedOptions.includes(option.id) && option.isCorrect 
-                        ? "bg-green-50 border border-green-200" 
-                        : selectedOptions.includes(option.id) && !option.isCorrect
-                        ? "bg-red-50 border border-red-200"
-                        : ""
-                    }`}
-                  >
-                    <RadioGroupItem value={option.id} id={option.id} />
-                    <Label htmlFor={option.id}>{option.text}</Label>
-                  </div>
-                ))}
+                {question.options && question.options.length > 0 ? (
+                  question.options.map((option) => (
+                    <div 
+                      key={option.id} 
+                      className={`flex items-center space-x-2 p-2 rounded ${
+                        selectedOptions.includes(option.id) && option.isCorrect 
+                          ? "bg-green-50 border border-green-200" 
+                          : selectedOptions.includes(option.id) && !option.isCorrect
+                          ? "bg-red-50 border border-red-200"
+                          : ""
+                      }`}
+                    >
+                      <RadioGroupItem value={option.id} id={option.id} />
+                      <Label htmlFor={option.id}>{option.text}</Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500">No options available</div>
+                )}
               </RadioGroup>
             )}
           </div>
