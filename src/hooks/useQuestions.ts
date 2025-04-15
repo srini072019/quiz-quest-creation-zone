@@ -4,6 +4,37 @@ import { toast } from "sonner";
 import { Question, QuestionFormData, QuestionType, DifficultyLevel } from "@/types/question.types";
 import { supabase } from "@/integrations/supabase/client";
 
+// Helper functions to map between string values and enum types
+const mapToQuestionType = (typeString: string): QuestionType => {
+  switch (typeString) {
+    case "multiple_choice":
+      return QuestionType.MULTIPLE_CHOICE;
+    case "true_false":
+      return QuestionType.TRUE_FALSE;
+    case "multiple_answer":
+      return QuestionType.MULTIPLE_ANSWER;
+    default:
+      // Default to MULTIPLE_CHOICE if type is not recognized
+      console.warn(`Unrecognized question type: ${typeString}`);
+      return QuestionType.MULTIPLE_CHOICE;
+  }
+};
+
+const mapToDifficultyLevel = (levelString: string): DifficultyLevel => {
+  switch (levelString) {
+    case "easy":
+      return DifficultyLevel.EASY;
+    case "medium":
+      return DifficultyLevel.MEDIUM;
+    case "hard":
+      return DifficultyLevel.HARD;
+    default:
+      // Default to MEDIUM if level is not recognized
+      console.warn(`Unrecognized difficulty level: ${levelString}`);
+      return DifficultyLevel.MEDIUM;
+  }
+};
+
 export const useQuestions = (subjectId?: string) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,14 +60,14 @@ export const useQuestions = (subjectId?: string) => {
       const transformedQuestions: Question[] = data.map(question => ({
         id: question.id,
         text: question.text,
-        type: question.type as QuestionType,
+        type: mapToQuestionType(question.type),
         options: question.question_options.map((option: any) => ({
           id: option.id,
           text: option.text,
           isCorrect: option.is_correct
         })),
         subjectId: question.subject_id,
-        difficultyLevel: question.difficulty_level as DifficultyLevel,
+        difficultyLevel: mapToDifficultyLevel(question.difficulty_level),
         explanation: question.explanation || "",
         createdAt: new Date(question.created_at),
         updatedAt: new Date(question.updated_at),
@@ -87,9 +118,9 @@ export const useQuestions = (subjectId?: string) => {
       const newQuestion: Question = {
         id: questionData.id,
         text: questionData.text,
-        type: questionData.type,
+        type: mapToQuestionType(questionData.type),
         subjectId: questionData.subject_id,
-        difficultyLevel: questionData.difficulty_level,
+        difficultyLevel: mapToDifficultyLevel(questionData.difficulty_level),
         explanation: questionData.explanation || "",
         createdAt: new Date(questionData.created_at),
         updatedAt: new Date(questionData.updated_at),
