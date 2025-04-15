@@ -1,5 +1,4 @@
 
-import React from "react";
 import { Question } from "@/types/question.types";
 import {
   DropdownMenu,
