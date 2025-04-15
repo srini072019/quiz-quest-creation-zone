@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast"; // Direct import
+import { toast } from "sonner";
 import { User, UserRole, AuthState } from "@/types/auth.types";
 import { ROUTES } from "@/constants/routes";
 import { supabase } from "@/integrations/supabase/client";
@@ -170,19 +170,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (error) throw error;
       
-      toast({
-        title: "Login successful",
-        description: `Welcome back!`,
+      toast.success("Login successful", {
+        description: "Welcome back!",
       });
       
       // Navigation will be handled by the auth state listener
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
       
-      toast({
-        title: "Login failed",
+      toast.error("Login failed", {
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
       });
       
       throw error;
@@ -206,8 +203,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (error) throw error;
       
-      toast({
-        title: "Registration successful",
+      toast.success("Registration successful", {
         description: `Welcome to Assessify, ${displayName}!`,
       });
       
@@ -215,10 +211,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
       
-      toast({
-        title: "Registration failed",
+      toast.error("Registration failed", {
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
       });
       
       throw error;
@@ -229,8 +223,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await supabase.auth.signOut();
       
-      toast({
-        title: "Logged out",
+      toast.success("Logged out", {
         description: "You have been successfully logged out.",
       });
       
@@ -238,10 +231,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error("Logout error:", error);
       
-      toast({
-        title: "Logout failed",
+      toast.error("Logout failed", {
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
       });
     }
   };
@@ -254,17 +245,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (error) throw error;
       
-      toast({
-        title: "Password reset email sent",
+      toast.success("Password reset email sent", {
         description: `If ${email} is associated with an account, you will receive password reset instructions.`,
       });
       
       navigate(ROUTES.LOGIN);
     } catch (error) {
-      toast({
-        title: "Password reset failed",
+      toast.error("Password reset failed", {
         description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
       });
       
       throw error;

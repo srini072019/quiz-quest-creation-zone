@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 
@@ -60,10 +60,8 @@ const CourseDetails = () => {
         setSubjects(subjectsData || []);
       } catch (error) {
         console.error('Error fetching course details:', error);
-        toast({
-          title: "Error loading course",
-          description: "There was a problem loading the course details.",
-          variant: "destructive",
+        toast.error("Error loading course", {
+          description: "There was a problem loading the course details."
         });
       } finally {
         setLoading(false);
