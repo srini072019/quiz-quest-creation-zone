@@ -37,8 +37,12 @@ const QuestionsPage = () => {
   }, []);
 
   const handleCreateQuestion = async (data: any) => {
-    await createQuestion(data);
-    setIsCreateDialogOpen(false);
+    const success = await createQuestion(data);
+    if (success) {
+      setIsCreateDialogOpen(false);
+      // Refetch questions to update the list
+      fetchQuestions();
+    }
   };
 
   const handleImportQuestions = async (questionsData: QuestionFormData[]) => {
@@ -50,8 +54,12 @@ const QuestionsPage = () => {
       // Process questions one by one
       for (const questionData of questionsData) {
         try {
-          await createQuestion(questionData);
-          successCount++;
+          const success = await createQuestion(questionData);
+          if (success) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
         } catch (err) {
           console.error("Error creating question:", err);
           errorCount++;
@@ -64,8 +72,9 @@ const QuestionsPage = () => {
         toast.success(`Successfully imported ${successCount} questions`);
       }
       
-      // Refresh the questions list after import
-      fetchQuestions();
+      // Explicitly refresh the questions list after import
+      await fetchQuestions();
+      
       return Promise.resolve();
     } catch (error) {
       console.error("Error in batch import:", error);

@@ -1,123 +1,95 @@
 
 import { useState } from "react";
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
-} from "@/components/ui/table";
-import { Question, DifficultyLevel } from "@/types/question.types";
+import { Question } from "@/types/question.types";
 import { Subject } from "@/types/subject.types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import QuestionPreview from "./QuestionPreview";
-import QuestionForm from "./QuestionForm";
-import { useQuestions } from "@/hooks/useQuestions";
-import QuestionTableHeader from "./table/QuestionTableHeader";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import QuestionActions from "./table/QuestionActions";
+import QuestionTableHeader from "./table/QuestionTableHeader";
 
 interface QuestionTableProps {
   questions: Question[];
   subjects: Subject[];
 }
 
-const QuestionTable = ({ questions: initialQuestions, subjects }: QuestionTableProps) => {
-  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
+const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterSubject, setFilterSubject] = useState("all-subjects");
-  const [questions, setQuestions] = useState(initialQuestions);
-  const { updateQuestion, deleteQuestion, isLoading } = useQuestions();
+  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>(questions);
 
+  // Update filtered questions when search query or questions change
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    
+    const filtered = questions.filter(question =>
+      question.text.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    setFilteredQuestions(filtered);
+  };
+
+  // Initialize filtered questions with all questions
+  if (filteredQuestions.length !== questions.length && searchQuery === "") {
+    setFilteredQuestions(questions);
+  }
+
+  // Get subject title by ID
   const getSubjectTitle = (subjectId: string) => {
     const subject = subjects.find(s => s.id === subjectId);
-    return subject ? subject.title : 'Unknown Subject';
+    return subject ? subject.title : "Unknown Subject";
   };
-
-  const handleEditQuestion = async (data: any) => {
-    if (selectedQuestion) {
-      await updateQuestion(selectedQuestion.id, data);
-      setIsEditOpen(false);
-      setSelectedQuestion(null);
-    }
-  };
-
-  const handleDeleteQuestion = async (question: Question) => {
-    if (confirm("Are you sure you want to delete this question?")) {
-      const success = await deleteQuestion(question.id);
-      if (success) {
-        // Update local state only if the API call was successful
-        setQuestions(prevQuestions => 
-          prevQuestions.filter(q => q.id !== question.id)
-        );
-      }
-    }
-  };
-
-  const filteredQuestions = questions.filter(question => {
-    const matchesSearch = searchQuery === "" || 
-      question.text.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = filterSubject === "all-subjects" || question.subjectId === filterSubject;
-    return matchesSearch && matchesSubject;
-  });
 
   return (
-    <div>
-      <QuestionTableHeader
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        filterSubject={filterSubject}
-        onFilterChange={setFilterSubject}
-        subjects={subjects}
-      />
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="w-full">
+          <Input
+            placeholder="Search questions..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>No.</TableHead>
+              <TableHead className="w-[50%]">Question</TableHead>
               <TableHead>Subject</TableHead>
-              <TableHead>Question Text</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Difficulty</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredQuestions.length > 0 ? (
-              filteredQuestions.map((question, index) => (
+              filteredQuestions.map((question) => (
                 <TableRow key={question.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{getSubjectTitle(question.subjectId)}</TableCell>
-                  <TableCell>
-                    {question.text.length > 60 
-                      ? `${question.text.substring(0, 60)}...` 
-                      : question.text}
+                  <TableCell className="font-medium max-w-[400px] truncate">
+                    {question.text}
                   </TableCell>
+                  <TableCell>{getSubjectTitle(question.subjectId)}</TableCell>
+                  <TableCell>{question.type}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium 
-                      ${question.difficultyLevel === DifficultyLevel.EASY 
-                        ? "bg-green-100 text-green-800"
-                        : question.difficultyLevel === DifficultyLevel.MEDIUM
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"}`}
+                    <Badge
+                      variant="outline"
+                      className={
+                        question.difficultyLevel === "easy"
+                          ? "bg-green-100 text-green-800 hover:bg-green-100 hover:text-green-800"
+                          : question.difficultyLevel === "medium"
+                          ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-800"
+                          : "bg-red-100 text-red-800 hover:bg-red-100 hover:text-red-800"
+                      }
                     >
                       {question.difficultyLevel}
-                    </span>
+                    </Badge>
                   </TableCell>
-                  <TableCell>
-                    <QuestionActions
-                      question={question}
-                      onView={() => {
-                        setSelectedQuestion(question);
-                        setIsPreviewOpen(true);
-                      }}
-                      onEdit={() => {
-                        setSelectedQuestion(question);
-                        setIsEditOpen(true);
-                      }}
-                      onDelete={() => handleDeleteQuestion(question)}
+                  <TableCell className="text-right">
+                    <QuestionActions 
+                      question={question} 
+                      subjects={subjects}
                     />
                   </TableCell>
                 </TableRow>
@@ -132,40 +104,6 @@ const QuestionTable = ({ questions: initialQuestions, subjects }: QuestionTableP
           </TableBody>
         </Table>
       </div>
-
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-3xl">
-          {selectedQuestion && (
-            <QuestionPreview question={selectedQuestion} />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Edit Question</DialogTitle>
-            <DialogDescription>
-              Update the details of this question.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedQuestion && (
-            <QuestionForm
-              subjects={subjects}
-              onSubmit={handleEditQuestion}
-              isSubmitting={isLoading}
-              initialData={{
-                text: selectedQuestion.text,
-                type: selectedQuestion.type,
-                subjectId: selectedQuestion.subjectId,
-                difficultyLevel: selectedQuestion.difficultyLevel,
-                explanation: selectedQuestion.explanation,
-                options: selectedQuestion.options,
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

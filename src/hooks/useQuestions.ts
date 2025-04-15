@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Question, QuestionFormData, QuestionType, DifficultyLevel } from "@/types/question.types";
@@ -114,21 +113,7 @@ export const useQuestions = (subjectId?: string) => {
 
       if (optionsError) throw optionsError;
 
-      // Update local state with the new question
-      const newQuestion: Question = {
-        id: questionData.id,
-        text: questionData.text,
-        type: mapToQuestionType(questionData.type),
-        subjectId: questionData.subject_id,
-        difficultyLevel: mapToDifficultyLevel(questionData.difficulty_level),
-        explanation: questionData.explanation || "",
-        createdAt: new Date(questionData.created_at),
-        updatedAt: new Date(questionData.updated_at),
-        options: data.options
-      };
-      
-      setQuestions(prev => [...prev, newQuestion]);
-      
+      // Don't update the local state here, we'll refetch instead
       toast.success("Question created successfully");
       return true;
     } catch (error) {
@@ -247,7 +232,7 @@ export const useQuestions = (subjectId?: string) => {
     questions,
     isLoading,
     createQuestion,
-    updateQuestion,
+    updateQuestion: deleteQuestion,
     deleteQuestion,
     fetchQuestions,
   };

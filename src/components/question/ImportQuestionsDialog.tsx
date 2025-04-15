@@ -49,6 +49,7 @@ const ImportQuestionsDialog = ({
     setProgress(0);
     setParsedQuestions([]);
     setActiveTab("upload");
+    setIsLoading(false);
   };
 
   const handleOpenChange = (open: boolean) => {
