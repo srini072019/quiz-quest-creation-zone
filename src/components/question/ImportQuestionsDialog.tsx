@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -140,20 +139,26 @@ const ImportQuestionsDialog = ({
       }
     }
     
-    // Parse difficulty level with proper null checks
+    // Parse difficulty level with proper number handling
     let difficultyLevel = DifficultyLevel.MEDIUM;
     if (row["Difficulty Level"] !== undefined && row["Difficulty Level"] !== null) {
-      if (typeof row["Difficulty Level"] === "string") {
+      if (typeof row["Difficulty Level"] === "number") {
+        switch (row["Difficulty Level"]) {
+          case 1:
+            difficultyLevel = DifficultyLevel.EASY;
+            break;
+          case 2:
+            difficultyLevel = DifficultyLevel.MEDIUM;
+            break;
+          case 3:
+            difficultyLevel = DifficultyLevel.HARD;
+            break;
+        }
+      } else if (typeof row["Difficulty Level"] === "string") {
         const difficultyStr = row["Difficulty Level"].toLowerCase();
         if (difficultyStr.includes("easy") || difficultyStr === "1") {
           difficultyLevel = DifficultyLevel.EASY;
         } else if (difficultyStr.includes("hard") || difficultyStr === "3") {
-          difficultyLevel = DifficultyLevel.HARD;
-        }
-      } else if (typeof row["Difficulty Level"] === "number") {
-        if (row["Difficulty Level"] === 1) {
-          difficultyLevel = DifficultyLevel.EASY;
-        } else if (row["Difficulty Level"] === 3) {
           difficultyLevel = DifficultyLevel.HARD;
         }
       }

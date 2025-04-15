@@ -1,13 +1,11 @@
-
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+  Table, 
+  TableHeader, 
+  TableBody, 
+  TableRow, 
+  TableHead, 
+  TableCell 
+} from "@/components/ui/table";
 import { DifficultyLevel, Question } from "@/types/question.types";
 import { Subject } from "@/types/subject.types";
 import {
@@ -15,9 +13,8 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { useState } from "react"
-
+} from "@tanstack/react-table";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,20 +24,21 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { MoreHorizontal } from "lucide-react"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Settings2, Eye, Pencil, Trash2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import QuestionPreview from "./QuestionPreview";
+import QuestionForm from "./QuestionForm";
+import { useQuestions } from "@/hooks/useQuestions";
 
 interface QuestionTableProps {
   questions: Question[];
@@ -48,10 +46,29 @@ interface QuestionTableProps {
 }
 
 const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
-  const [rowSelection, setRowSelection] = useState({})
-  const [columnVisibility, setColumnVisibility] = useState({})
-  const [columnFilters, setColumnFilters] = useState([])
-  const [globalFilter, setGlobalFilter] = useState("")
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { updateQuestion, deleteQuestion } = useQuestions();
+
+  const handleEdit = async (data: any) => {
+    if (selectedQuestion) {
+      await updateQuestion(selectedQuestion.id, data);
+      setIsEditOpen(false);
+      setSelectedQuestion(null);
+      toast.success("Question updated successfully");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedQuestion) {
+      await deleteQuestion(selectedQuestion.id);
+      setIsDeleteDialogOpen(false);
+      setSelectedQuestion(null);
+      toast.success("Question deleted successfully");
+    }
+  };
 
   const getSubjectTitle = (subjectId: string) => {
     const subject = subjects.find(s => s.id === subjectId);
@@ -113,39 +130,35 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
           <div className="text-right">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
-                  <MoreHorizontal className="h-4 w-4" />
+                <Button variant="ghost" size="icon">
+                  <Settings2 className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => navigator.clipboard.writeText(question.id)}
-                >
-                  Copy question ID
+                <DropdownMenuItem onClick={() => {
+                  setSelectedQuestion(question);
+                  setIsPreviewOpen(true);
+                }}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View question
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>View question</DropdownMenuItem>
-                <DropdownMenuItem>Edit question</DropdownMenuItem>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <DropdownMenuItem>Delete question</DropdownMenuItem>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete
-                        your question from our servers.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedQuestion(question);
+                  setIsEditOpen(true);
+                }}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit question
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-red-600"
+                  onClick={() => {
+                    setSelectedQuestion(question);
+                    setIsDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete question
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -228,6 +241,53 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-3xl">
+          {selectedQuestion && (
+            <QuestionPreview question={selectedQuestion} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-3xl">
+          {selectedQuestion && (
+            <QuestionForm
+              subjects={subjects}
+              onSubmit={handleEdit}
+              initialData={{
+                text: selectedQuestion.text,
+                type: selectedQuestion.type,
+                subjectId: selectedQuestion.subjectId,
+                difficultyLevel: selectedQuestion.difficultyLevel,
+                explanation: selectedQuestion.explanation,
+                options: selectedQuestion.options,
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the question.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
