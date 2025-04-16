@@ -63,13 +63,13 @@ export const useExams = (courseId?: string, instructorId?: string) => {
           title: data.title,
           description: data.description,
           course_id: data.courseId,
-          instructor_id: supabase.auth.getUser().then(res => res.data.user?.id),
+          instructor_id: await supabase.auth.getUser().then(res => res.data.user?.id),
           time_limit: data.timeLimit,
           passing_score: data.passingScore,
           shuffle_questions: data.shuffleQuestions,
           status: data.status,
-          start_date: data.startDate,
-          end_date: data.endDate,
+          start_date: data.startDate ? data.startDate.toISOString() : null,
+          end_date: data.endDate ? data.endDate.toISOString() : null,
         })
         .select()
         .single();
@@ -117,8 +117,8 @@ export const useExams = (courseId?: string, instructorId?: string) => {
           passing_score: data.passingScore,
           shuffle_questions: data.shuffleQuestions,
           status: data.status,
-          start_date: data.startDate,
-          end_date: data.endDate,
+          start_date: data.startDate ? data.startDate.toISOString() : null,
+          end_date: data.endDate ? data.endDate.toISOString() : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id);

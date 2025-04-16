@@ -91,11 +91,11 @@ const AppRouter = () => {
       element: <CandidateCourses />,
     },
     {
-      path: "/candidate/exams",
+      path: ROUTES.CANDIDATE_EXAMS,
       element: <Exams />,
     },
     {
-      path: "/candidate/exams/:id",
+      path: `${ROUTES.CANDIDATE_EXAMS}/:id`,
       element: <ExamPage />,
     },
     
