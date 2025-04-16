@@ -3,7 +3,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -35,10 +34,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import QuestionPoolConfig from "./QuestionPoolConfig";
 import { QuestionPool } from "@/types/question-pool.types";
+import QuestionSelectionSection from "./QuestionSelectionSection";
 
 const examSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -89,8 +88,10 @@ const ExamForm = ({
   const [selectedCourseId, setSelectedCourseId] = useState(initialData?.courseId || "");
   const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [useQuestionPool, setUseQuestionPool] = useState(initialData?.useQuestionPool || false);
-  const [questionPool, setQuestionPool] = useState<QuestionPool | undefined>(initialData?.questionPool);
-  
+  const [questionPool, setQuestionPool] = useState<QuestionPool | undefined>(
+    initialData?.questionPool
+  );
+
   const form = useForm({
     resolver: zodResolver(examSchema),
     defaultValues: {
@@ -109,7 +110,7 @@ const ExamForm = ({
   });
 
   const watchCourseId = form.watch("courseId");
-  
+
   useEffect(() => {
     if (watchCourseId) {
       setSelectedCourseId(watchCourseId);
@@ -136,7 +137,7 @@ const ExamForm = ({
       acc[subject.id].questions.push(question);
     }
     return acc;
-  }, {} as Record<string, { subject: typeof subjects[0], questions: typeof questions }>);
+  }, {} as Record<string, { subject: typeof subjects[0], questions: Question[] }>);
 
   const handleSubmit = (data: z.infer<typeof examSchema>) => {
     if (useQuestionPool && questionPool) {
@@ -431,75 +432,11 @@ const ExamForm = ({
         </div>
 
         {!useQuestionPool && (
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="questions"
-              render={() => (
-                <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-base">Questions</FormLabel>
-                    <FormDescription>
-                      Select questions from available subjects
-                    </FormDescription>
-                  </div>
-                  <div className="space-y-4 border rounded-lg p-4">
-                    {Object.values(questionsBySubject).map(({ subject, questions: subjectQuestions }) => (
-                      <div key={subject.id} className="space-y-2">
-                        <h4 className="font-medium">{subject.title} ({subjectQuestions.length} questions)</h4>
-                        <div className="pl-4 space-y-2">
-                          {subjectQuestions.map((question) => (
-                            <FormField
-                              key={question.id}
-                              control={form.control}
-                              name="questions"
-                              render={({ field }) => (
-                                <FormItem
-                                  key={question.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0 py-2"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(question.id)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...field.value, question.id])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== question.id
-                                              )
-                                            );
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                    <FormLabel className="text-sm font-normal">
-                                      {question.text}
-                                    </FormLabel>
-                                    <FormDescription>
-                                      {question.difficultyLevel} - {question.options.length} options
-                                    </FormDescription>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                    {Object.keys(questionsBySubject).length === 0 && (
-                      <div className="py-4 text-center text-gray-500">
-                        {selectedCourseId
-                          ? "No questions available for this course's subjects"
-                          : "Select a course to see available questions"}
-                      </div>
-                    )}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <QuestionSelectionSection
+            form={form}
+            questionsBySubject={questionsBySubject}
+            selectedCourseId={selectedCourseId}
+          />
         )}
 
         {useQuestionPool && (
