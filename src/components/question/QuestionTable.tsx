@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Question, DifficultyLevel } from "@/types/question.types";
 import { Subject } from "@/types/subject.types";
@@ -20,25 +19,20 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // Get the subject titles by ID for display
   const subjectMap = useMemo(() => {
     const map = new Map<string, string>();
     subjects.forEach(subject => map.set(subject.id, subject.title));
     return map;
   }, [subjects]);
 
-  // Filter questions by search query and selected filters
   const filteredQuestions = useMemo(() => {
     return questions.filter(question => {
-      // Filter by search query
       const matchesSearch = searchQuery === "" || 
         question.text.toLowerCase().includes(searchQuery.toLowerCase());
       
-      // Filter by subject
       const matchesSubject = filterSubject === "all-subjects" || 
         question.subjectId === filterSubject;
         
-      // Filter by difficulty
       const matchesDifficulty = filterDifficulty === "all-difficulty" || 
         question.difficultyLevel === filterDifficulty;
         
@@ -46,16 +40,13 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
     });
   }, [questions, searchQuery, filterSubject, filterDifficulty]);
 
-  // Apply pagination
   const paginatedQuestions = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return filteredQuestions.slice(startIndex, startIndex + pageSize);
   }, [filteredQuestions, currentPage, pageSize]);
 
-  // Calculate total pages based on filtered results and page size
   const totalPages = Math.max(1, Math.ceil(filteredQuestions.length / pageSize));
 
-  // Reset to first page when filters change
   const handleFilterChange = (subject: string) => {
     setFilterSubject(subject);
     setCurrentPage(1);
@@ -80,7 +71,6 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
     setCurrentPage(1);
   };
 
-  // Helper function to get difficulty badge color
   const getDifficultyColor = (level: DifficultyLevel) => {
     switch (level) {
       case DifficultyLevel.EASY:
@@ -140,7 +130,7 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
                   </TableCell>
                   <TableCell>{question.options.length}</TableCell>
                   <TableCell>
-                    <QuestionActions question={question} />
+                    <QuestionActions question={question} subjects={subjects} />
                   </TableCell>
                 </TableRow>
               ))
