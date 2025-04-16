@@ -3,37 +3,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Question, QuestionFormData, QuestionType, DifficultyLevel } from "@/types/question.types";
 import { supabase } from "@/integrations/supabase/client";
-
-// Helper functions to map between string values and enum types
-const mapToQuestionType = (typeString: string): QuestionType => {
-  switch (typeString) {
-    case "multiple_choice":
-      return QuestionType.MULTIPLE_CHOICE;
-    case "true_false":
-      return QuestionType.TRUE_FALSE;
-    case "multiple_answer":
-      return QuestionType.MULTIPLE_ANSWER;
-    default:
-      // Default to MULTIPLE_CHOICE if type is not recognized
-      console.warn(`Unrecognized question type: ${typeString}`);
-      return QuestionType.MULTIPLE_CHOICE;
-  }
-};
-
-const mapToDifficultyLevel = (levelString: string): DifficultyLevel => {
-  switch (levelString) {
-    case "easy":
-      return DifficultyLevel.EASY;
-    case "medium":
-      return DifficultyLevel.MEDIUM;
-    case "hard":
-      return DifficultyLevel.HARD;
-    default:
-      // Default to MEDIUM if level is not recognized
-      console.warn(`Unrecognized difficulty level: ${levelString}`);
-      return DifficultyLevel.MEDIUM;
-  }
-};
+import { mapToQuestionType, mapToDifficultyLevel } from "@/utils/questionUtils";
 
 export const useQuestions = (subjectId?: string) => {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -114,7 +84,8 @@ export const useQuestions = (subjectId?: string) => {
 
       if (optionsError) throw optionsError;
 
-      // Don't update the local state here, we'll refetch instead
+      // Refresh questions list
+      await fetchQuestions();
       toast.success("Question created successfully");
       return true;
     } catch (error) {
@@ -165,22 +136,8 @@ export const useQuestions = (subjectId?: string) => {
 
       if (insertOptionsError) throw insertOptionsError;
 
-      // Update the local state
-      setQuestions(prev => 
-        prev.map(q => 
-          q.id === id ? {
-            ...q,
-            text: data.text,
-            type: data.type,
-            subjectId: data.subjectId,
-            difficultyLevel: data.difficultyLevel,
-            explanation: data.explanation || "",
-            options: data.options,
-            updatedAt: new Date()
-          } : q
-        )
-      );
-
+      // Refresh questions list
+      await fetchQuestions();
       toast.success("Question updated successfully");
       return true;
     } catch (error) {
@@ -211,9 +168,8 @@ export const useQuestions = (subjectId?: string) => {
 
       if (questionError) throw questionError;
 
-      // Update local state
-      setQuestions(prev => prev.filter(q => q.id !== id));
-      
+      // Refresh questions list
+      await fetchQuestions();
       toast.success("Question deleted successfully");
       return true;
     } catch (error) {

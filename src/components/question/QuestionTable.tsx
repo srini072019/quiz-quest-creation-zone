@@ -140,7 +140,7 @@ const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
                   </TableCell>
                   <TableCell>{question.options.length}</TableCell>
                   <TableCell>
-                    <QuestionActions question={question} subjects={subjects} />
+                    <QuestionActions question={question} />
                   </TableCell>
                 </TableRow>
               ))

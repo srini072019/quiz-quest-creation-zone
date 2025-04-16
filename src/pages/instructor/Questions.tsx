@@ -19,29 +19,41 @@ import QuestionTable from "@/components/question/QuestionTable";
 import ImportQuestionsDialog from "@/components/question/ImportQuestionsDialog";
 import { Badge } from "@/components/ui/badge";
 import { useQuestions } from "@/hooks/useQuestions";
+import { useExams } from "@/hooks/useExams";
 import { toast } from "sonner";
 import { QuestionFormData } from "@/types/question.types";
 
 const QuestionsPage = () => {
   const { subjects, fetchSubjects } = useSubjects();
   const { questions, createQuestion, isLoading, fetchQuestions } = useQuestions();
+  const { exams } = useExams();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState<string>("all");
   const [importLoading, setImportLoading] = useState(false);
+  const [examStats, setExamStats] = useState({ total: 0, active: 0 });
 
   useEffect(() => {
     fetchSubjects();
-    // Ensure questions are fetched when the component mounts
     fetchQuestions();
   }, []);
+
+  // Calculate exam statistics
+  useEffect(() => {
+    if (exams.length > 0) {
+      const active = exams.filter(exam => exam.status === 'published').length;
+      setExamStats({
+        total: exams.length,
+        active
+      });
+    }
+  }, [exams]);
 
   const handleCreateQuestion = async (data: any) => {
     const success = await createQuestion(data);
     if (success) {
       setIsCreateDialogOpen(false);
-      // Refetch questions to update the list
-      fetchQuestions();
+      // Questions list is refreshed in the hook
     }
   };
 
@@ -72,10 +84,7 @@ const QuestionsPage = () => {
         toast.success(`Successfully imported ${successCount} questions`);
       }
       
-      // Explicitly refresh the questions list after import
-      await fetchQuestions();
-      
-      setIsImportDialogOpen(false); // Close the dialog after import
+      setIsImportDialogOpen(false);
       return Promise.resolve();
     } catch (error) {
       console.error("Error in batch import:", error);
@@ -128,6 +137,33 @@ const QuestionsPage = () => {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-500">Total Questions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{questions.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-500">Total Exams</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{examStats.total}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-500">Active Exams</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{examStats.active}</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
           <CardHeader className="bg-gray-50 dark:bg-gray-800">
             <Tabs defaultValue="all" value={currentTab} onValueChange={setCurrentTab}>
@@ -141,7 +177,6 @@ const QuestionsPage = () => {
             </Tabs>
           </CardHeader>
           <CardContent className="p-6">
-            {/* Table with built-in search and filter */}
             <QuestionTable questions={questions} subjects={subjects} />
           </CardContent>
         </Card>

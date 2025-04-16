@@ -1,9 +1,10 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { read, utils } from "xlsx";
+import { read, utils, writeFileXLSX } from "xlsx";
 import { QuestionFormData, QuestionType, DifficultyLevel } from "@/types/question.types";
 import { Subject } from "@/types/subject.types";
+import { mapToQuestionType, mapToDifficultyLevel } from "@/utils/questionUtils";
 
 interface SpreadsheetQuestion {
   question: string;
@@ -35,32 +36,6 @@ export const useImportQuestions = (subjects: Subject[]) => {
       }
     }
     return null;
-  };
-
-  const mapQuestionType = (typeString: string): QuestionType | null => {
-    const lowerType = typeString.toLowerCase().trim();
-    
-    if (lowerType === "multiple choice" || lowerType === "multiple_choice") {
-      return QuestionType.MULTIPLE_CHOICE;
-    } else if (lowerType === "true false" || lowerType === "true/false" || lowerType === "true_false") {
-      return QuestionType.TRUE_FALSE;
-    } else if (lowerType === "multiple answer" || lowerType === "multiple_answer") {
-      return QuestionType.MULTIPLE_ANSWER;
-    }
-    
-    return null;
-  };
-
-  const mapDifficultyLevel = (difficultyString: string): DifficultyLevel => {
-    const lowerDifficulty = difficultyString.toLowerCase().trim();
-    
-    if (lowerDifficulty === "easy") {
-      return DifficultyLevel.EASY;
-    } else if (lowerDifficulty === "hard") {
-      return DifficultyLevel.HARD;
-    }
-    
-    return DifficultyLevel.MEDIUM; // Default to medium
   };
 
   const findSubjectId = (subjectName: string): string | null => {
@@ -134,11 +109,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
               }
               
               // Map question type
-              const questionType = mapQuestionType(row.type);
-              if (!questionType) {
-                errors.push(`Row ${index + 1}: Invalid question type: ${row.type}`);
-                return;
-              }
+              const questionType = mapToQuestionType(row.type);
               
               // Find subject ID
               const subjectId = findSubjectId(row.subject);
@@ -164,7 +135,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
                 text: row.question,
                 type: questionType,
                 subjectId,
-                difficultyLevel: mapDifficultyLevel(row.difficulty || "medium"),
+                difficultyLevel: mapToDifficultyLevel(row.difficulty || "medium"),
                 options,
                 explanation: row.explanation || ""
               };
@@ -222,6 +193,44 @@ export const useImportQuestions = (subjects: Subject[]) => {
     }
   };
 
+  const downloadTemplate = () => {
+    try {
+      // Create template data
+      const template = [
+        {
+          question: "What is the capital of France?",
+          type: "multiple_choice",
+          subject: subjects.length > 0 ? subjects[0].title : "Enter a valid subject name",
+          difficulty: "medium",
+          options: "Paris;London;Berlin;Madrid",
+          correctAnswers: "Paris",
+          explanation: "Paris is the capital and largest city of France."
+        },
+        {
+          question: "The Earth is flat.",
+          type: "true_false",
+          subject: subjects.length > 0 ? subjects[0].title : "Enter a valid subject name",
+          difficulty: "easy",
+          options: "True;False",
+          correctAnswers: "False",
+          explanation: "The Earth is approximately spherical in shape."
+        }
+      ];
+
+      // Convert to worksheet
+      const ws = utils.json_to_sheet(template);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, "Questions Template");
+
+      // Download
+      writeFileXLSX(wb, "questions_import_template.xlsx");
+      toast.success("Template downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      toast.error("Failed to download template");
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -229,5 +238,6 @@ export const useImportQuestions = (subjects: Subject[]) => {
     parsedQuestions,
     handleFileUpload,
     resetState,
+    downloadTemplate
   };
 };
