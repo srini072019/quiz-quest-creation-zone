@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,7 +47,7 @@ const examSchema = z.object({
   timeLimit: z.coerce.number().min(5, "Time limit must be at least 5 minutes"),
   passingScore: z.coerce.number().min(1, "Passing score is required").max(100, "Passing score cannot exceed 100%"),
   shuffleQuestions: z.boolean(),
-  useQuestionPool: z.boolean().optional(),
+  useQuestionPool: z.boolean().default(false),
   status: z.nativeEnum(ExamStatus),
   questions: z.array(z.string()).min(1, "At least one question is required"),
   startDate: z.date().optional(),

@@ -38,7 +38,7 @@ export interface ExamFormData {
   questions: string[];
   startDate?: Date;
   endDate?: Date;
-  useQuestionPool?: boolean;
+  useQuestionPool: boolean; // Changed from optional to required
   questionPool?: QuestionPool;
 }
 
