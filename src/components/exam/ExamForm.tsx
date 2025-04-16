@@ -39,7 +39,9 @@ import { cn } from "@/lib/utils";
 import QuestionPoolConfig from "./QuestionPoolConfig";
 import { QuestionPool } from "@/types/question-pool.types";
 import QuestionSelectionSection from "./QuestionSelectionSection";
+import { ExamFormData } from "@/types/exam.types";
 
+// Modify the examSchema to match the ExamFormData interface
 const examSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(5, "Description must be at least 5 characters"),
@@ -72,7 +74,7 @@ interface ExamFormProps {
   courses: Course[];
   questions: Question[];
   subjects: Subject[];
-  onSubmit: (data: any) => void;
+  onSubmit: (data: ExamFormData) => void;
   isSubmitting: boolean;
   courseIdFixed?: boolean;
 }
@@ -93,7 +95,8 @@ const ExamForm = ({
     initialData?.questionPool
   );
 
-  const form = useForm({
+  // Explicitly type the form with ExamFormData to ensure type compatibility
+  const form = useForm<ExamFormData>({
     resolver: zodResolver(examSchema),
     defaultValues: {
       title: initialData?.title || "",
@@ -140,7 +143,7 @@ const ExamForm = ({
     return acc;
   }, {} as Record<string, { subject: typeof subjects[0], questions: Question[] }>);
 
-  const handleSubmit = (data: z.infer<typeof examSchema>) => {
+  const handleSubmit = (data: ExamFormData) => {
     if (useQuestionPool && questionPool) {
       onSubmit({
         ...data,
