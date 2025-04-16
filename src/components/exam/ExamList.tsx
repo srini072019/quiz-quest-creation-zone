@@ -21,7 +21,7 @@ interface ExamListProps {
 }
 
 const ExamList = ({ courseId, courses, questions }: ExamListProps) => {
-  const { exams: allExams, createExam, updateExam, deleteExam, publishExam, archiveExam, isLoading } = useExams();
+  const { exams: allExams, createExam, updateExam, deleteExam, publishExam, archiveExam, isLoading } = useExams(courseId);
   const { subjects } = useSubjects();
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);

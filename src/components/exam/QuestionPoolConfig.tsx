@@ -1,15 +1,19 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Plus, Minus } from "lucide-react";
 import { Subject } from "@/types/subject.types";
 import { DifficultyLevel } from "@/types/question.types";
-import { QuestionPool, QuestionPoolCondition } from "@/types/question-pool.types";
-import { Plus, Trash } from "lucide-react";
-import { v4 as uuidv4 } from "uuid";
+import { QuestionPool, SubjectPoolItem } from "@/types/question-pool.types";
 
 interface QuestionPoolConfigProps {
   subjects: Subject[];
@@ -17,194 +21,196 @@ interface QuestionPoolConfigProps {
   onPoolChange: (pool: QuestionPool) => void;
 }
 
-const QuestionPoolConfig = ({
-  subjects,
-  initialPool,
-  onPoolChange,
+const QuestionPoolConfig = ({ 
+  subjects, 
+  initialPool, 
+  onPoolChange 
 }: QuestionPoolConfigProps) => {
   const [pool, setPool] = useState<QuestionPool>(
     initialPool || {
-      id: uuidv4(),
-      name: "Default Pool",
-      description: "Randomized question pool",
-      conditions: [{ count: 5 }],
+      totalQuestions: 10,
+      subjects: []
     }
   );
 
-  const handleNameChange = (name: string) => {
-    const updatedPool = { ...pool, name };
-    setPool(updatedPool);
-    onPoolChange(updatedPool);
-  };
-
-  const handleDescriptionChange = (description: string) => {
-    const updatedPool = { ...pool, description };
-    setPool(updatedPool);
-    onPoolChange(updatedPool);
-  };
-
-  const handleAddCondition = () => {
-    const updatedPool = {
-      ...pool,
-      conditions: [...pool.conditions, { count: 1 }],
-    };
-    setPool(updatedPool);
-    onPoolChange(updatedPool);
-  };
-
-  const handleRemoveCondition = (index: number) => {
-    const updatedConditions = pool.conditions.filter((_, i) => i !== index);
-    const updatedPool = {
-      ...pool,
-      conditions: updatedConditions,
-    };
-    setPool(updatedPool);
-    onPoolChange(updatedPool);
-  };
-
-  const handleConditionChange = (index: number, field: keyof QuestionPoolCondition, value: any) => {
-    const updatedConditions = [...pool.conditions];
-    updatedConditions[index] = {
-      ...updatedConditions[index],
-      [field]: value,
+  // Add a subject to the pool
+  const addSubject = () => {
+    if (subjects.length === 0) return;
+    
+    // Find a subject not already in the pool
+    const availableSubjects = subjects.filter(
+      subject => !pool.subjects.some(poolSubject => poolSubject.subjectId === subject.id)
+    );
+    
+    if (availableSubjects.length === 0) return;
+    
+    const newSubjectItem: SubjectPoolItem = {
+      subjectId: availableSubjects[0].id,
+      count: 5
     };
     
     const updatedPool = {
       ...pool,
-      conditions: updatedConditions,
+      subjects: [...pool.subjects, newSubjectItem]
     };
+    
     setPool(updatedPool);
     onPoolChange(updatedPool);
   };
 
-  const handleSubjectChange = (index: number, value: string[]) => {
-    const updatedConditions = [...pool.conditions];
-    updatedConditions[index] = {
-      ...updatedConditions[index],
-      subjectIds: value,
-    };
+  // Remove a subject from the pool
+  const removeSubject = (index: number) => {
+    const updatedSubjects = [...pool.subjects];
+    updatedSubjects.splice(index, 1);
     
     const updatedPool = {
       ...pool,
-      conditions: updatedConditions,
+      subjects: updatedSubjects
     };
+    
     setPool(updatedPool);
     onPoolChange(updatedPool);
   };
+
+  // Update subject or count in the pool
+  const updateSubjectItem = (index: number, field: string, value: any) => {
+    const updatedSubjects = [...pool.subjects];
+    
+    if (field === 'subjectId') {
+      updatedSubjects[index].subjectId = value;
+    } else if (field === 'count') {
+      updatedSubjects[index].count = parseInt(value, 10);
+    }
+    
+    const updatedPool = {
+      ...pool,
+      subjects: updatedSubjects
+    };
+    
+    setPool(updatedPool);
+    onPoolChange(updatedPool);
+  };
+
+  // Update total questions
+  const updateTotalQuestions = (value: string) => {
+    const total = parseInt(value, 10);
+    if (isNaN(total) || total < 1) return;
+    
+    const updatedPool = {
+      ...pool,
+      totalQuestions: total
+    };
+    
+    setPool(updatedPool);
+    onPoolChange(updatedPool);
+  };
+
+  useEffect(() => {
+    // Initialize with first subject if pool is empty and subjects exist
+    if (pool.subjects.length === 0 && subjects.length > 0) {
+      const initialSubjectItem: SubjectPoolItem = {
+        subjectId: subjects[0].id,
+        count: 5
+      };
+      
+      const updatedPool = {
+        ...pool,
+        subjects: [initialSubjectItem]
+      };
+      
+      setPool(updatedPool);
+      onPoolChange(updatedPool);
+    }
+  }, [subjects]);
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="pool-name">Pool Name</Label>
+          <Label htmlFor="totalQuestions">Total Questions</Label>
           <Input
-            id="pool-name"
-            placeholder="Enter pool name"
-            value={pool.name}
-            onChange={(e) => handleNameChange(e.target.value)}
+            id="totalQuestions"
+            type="number"
+            min="1"
+            value={pool.totalQuestions}
+            onChange={(e) => updateTotalQuestions(e.target.value)}
           />
-        </div>
-        <div>
-          <Label htmlFor="pool-description">Description</Label>
-          <Input
-            id="pool-description"
-            placeholder="Enter pool description"
-            value={pool.description}
-            onChange={(e) => handleDescriptionChange(e.target.value)}
-          />
+          <p className="text-sm text-muted-foreground mt-1">
+            Number of questions to randomly select from the pool
+          </p>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <h3 className="text-md font-medium">Conditions</h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAddCondition}
+          <h4 className="text-sm font-medium">Subject Distribution</h4>
+          <Button 
+            type="button" 
+            size="sm" 
+            variant="outline" 
+            onClick={addSubject}
+            disabled={subjects.length === pool.subjects.length}
           >
-            <Plus size={16} className="mr-1" /> Add Condition
+            <Plus className="h-4 w-4 mr-1" />
+            Add Subject
           </Button>
         </div>
 
-        {pool.conditions.map((condition, index) => (
-          <Card key={index}>
-            <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm font-medium flex justify-between items-center">
-                Condition {index + 1}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveCondition(index)}
-                  disabled={pool.conditions.length <= 1}
-                >
-                  <Trash size={14} />
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="py-3">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor={`condition-${index}-difficulty`}>
-                    Difficulty
-                  </Label>
-                  <Select
-                    value={condition.difficultyLevel}
-                    onValueChange={(value) =>
-                      handleConditionChange(index, "difficultyLevel", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Any difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={undefined}>Any difficulty</SelectItem>
-                      <SelectItem value={DifficultyLevel.EASY}>Easy</SelectItem>
-                      <SelectItem value={DifficultyLevel.MEDIUM}>Medium</SelectItem>
-                      <SelectItem value={DifficultyLevel.HARD}>Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor={`condition-${index}-subjects`}>Subjects</Label>
-                  <Select
-                    value={condition.subjectIds?.[0]}
-                    onValueChange={(value) =>
-                      handleSubjectChange(index, [value])
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Any subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={undefined}>Any subject</SelectItem>
-                      {subjects.map((subject) => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor={`condition-${index}-count`}>
-                    Number of Questions
-                  </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    id={`condition-${index}-count`}
-                    value={condition.count}
-                    onChange={(e) =>
-                      handleConditionChange(index, "count", parseInt(e.target.value) || 1)
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {pool.subjects.map((subjectItem, index) => (
+          <div key={index} className="flex items-end gap-2 p-3 border rounded-md">
+            <div className="flex-1">
+              <Label htmlFor={`subject-${index}`}>Subject</Label>
+              <Select
+                value={subjectItem.subjectId}
+                onValueChange={(value) => updateSubjectItem(index, 'subjectId', value)}
+              >
+                <SelectTrigger id={`subject-${index}`}>
+                  <SelectValue placeholder="Select a subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects
+                    .filter(subject => 
+                      subject.id === subjectItem.subjectId || 
+                      !pool.subjects.some(item => item.subjectId === subject.id)
+                    )
+                    .map(subject => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.title}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="w-24">
+              <Label htmlFor={`count-${index}`}>Count</Label>
+              <Input
+                id={`count-${index}`}
+                type="number"
+                min="1"
+                value={subjectItem.count}
+                onChange={(e) => updateSubjectItem(index, 'count', e.target.value)}
+              />
+            </div>
+            
+            <Button 
+              type="button" 
+              size="icon" 
+              variant="ghost" 
+              className="mb-[2px]"
+              onClick={() => removeSubject(index)}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+          </div>
         ))}
+        
+        {pool.subjects.length === 0 && (
+          <div className="text-center p-4 border rounded-md text-muted-foreground">
+            No subjects added to the pool yet. Click "Add Subject" to begin.
+          </div>
+        )}
       </div>
     </div>
   );

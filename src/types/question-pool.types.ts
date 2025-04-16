@@ -1,20 +1,15 @@
 
 import { DifficultyLevel } from "./question.types";
 
-export interface QuestionPoolCondition {
-  difficultyLevel?: DifficultyLevel;
-  subjectIds?: string[];
+export interface SubjectPoolItem {
+  subjectId: string;
   count: number;
+  difficultyLevels?: {
+    [key in DifficultyLevel]?: number;
+  };
 }
 
 export interface QuestionPool {
-  id: string;
-  name: string;
-  description: string;
-  conditions: QuestionPoolCondition[];
-}
-
-export interface ExamWithQuestionPool {
-  useQuestionPool: boolean;
-  questionPool?: QuestionPool;
+  totalQuestions: number;
+  subjects: SubjectPoolItem[];
 }

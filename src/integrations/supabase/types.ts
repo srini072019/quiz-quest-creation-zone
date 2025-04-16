@@ -50,6 +50,98 @@ export type Database = {
           },
         ]
       }
+      exam_questions: {
+        Row: {
+          created_at: string
+          exam_id: string
+          order_number: number
+          question_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_id: string
+          order_number: number
+          question_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_id?: string
+          order_number?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_questions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exams: {
+        Row: {
+          course_id: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          instructor_id: string
+          passing_score: number
+          shuffle_questions: boolean
+          start_date: string | null
+          status: string
+          time_limit: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          instructor_id: string
+          passing_score?: number
+          shuffle_questions?: boolean
+          start_date?: string | null
+          status?: string
+          time_limit?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          instructor_id?: string
+          passing_score?: number
+          shuffle_questions?: boolean
+          start_date?: string | null
+          status?: string
+          time_limit?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
