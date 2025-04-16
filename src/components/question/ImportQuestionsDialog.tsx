@@ -2,353 +2,103 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, FileSpreadsheet, Upload, Download } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { read, utils, write } from "xlsx";
-import { Subject } from "@/types/subject.types";
-import { toast } from "sonner";
-import { DifficultyLevel, QuestionFormData, QuestionType } from "@/types/question.types";
-import { Progress } from "@/components/ui/progress";
-import { v4 as uuidv4 } from "uuid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { X, Upload, AlertTriangle, FileSpreadsheet, Check } from "lucide-react";
+import { Subject } from "@/types/subject.types";
+import { QuestionFormData } from "@/types/question.types";
+import { useImportQuestions } from "@/hooks/useImportQuestions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface ImportQuestionsDialogProps {
+export interface ImportQuestionsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subjects: Subject[];
   onImport: (questions: QuestionFormData[]) => Promise<void>;
+  isLoading?: boolean;
 }
 
-interface SpreadsheetQuestion {
-  Subject?: string;
-  "Question Type"?: string;
-  "Question Text"?: string;
-  "Option 1"?: string;
-  "Option 2"?: string;
-  "Option 3"?: string;
-  "Option 4"?: string;
-  "Correct Option"?: string | number;
-  "Difficulty Level"?: string | number;
-  "Explanation"?: string;
-}
-
-const ImportQuestionsDialog = ({ 
-  open, 
-  onOpenChange, 
-  subjects, 
-  onImport 
+const ImportQuestionsDialog = ({
+  open,
+  onOpenChange,
+  subjects,
+  onImport,
+  isLoading: importLoading = false
 }: ImportQuestionsDialogProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [parsedQuestions, setParsedQuestions] = useState<QuestionFormData[]>([]);
   const [activeTab, setActiveTab] = useState<string>("upload");
+  const {
+    isLoading: parsingLoading,
+    error,
+    progress,
+    parsedQuestions,
+    handleFileUpload: processFile,
+    resetState
+  } = useImportQuestions(subjects);
   
-  const resetState = () => {
-    setError(null);
-    setProgress(0);
-    setParsedQuestions([]);
-    setActiveTab("upload");
-    setIsLoading(false);
-  };
-
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
+  // Use either the passed in loading state or the internal parsing loading state
+  const isLoading = importLoading || parsingLoading;
+  
+  const onDialogOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
       resetState();
     }
-    onOpenChange(open);
+    onOpenChange(newOpen);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      setProgress(10);
-      
-      // Read the file
-      const data = await file.arrayBuffer();
-      const workbook = read(data);
-      setProgress(30);
-      
-      // Get the first worksheet
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      
-      // Convert to JSON
-      const jsonData = utils.sheet_to_json<SpreadsheetQuestion>(worksheet);
-      setProgress(50);
-      
-      if (jsonData.length === 0) {
-        throw new Error("No data found in the spreadsheet");
-      }
-      
-      // Transform data to QuestionFormData
-      const questionData: QuestionFormData[] = [];
-      
-      for (const row of jsonData) {
-        try {
-          const transformedQuestion = transformRowToQuestion(row, subjects);
-          questionData.push(transformedQuestion);
-        } catch (err) {
-          console.error("Error transforming row:", err);
-          // Continue processing other rows
-        }
-      }
-      
-      if (questionData.length === 0) {
-        throw new Error("No valid questions found in the spreadsheet");
-      }
-      
-      setProgress(80);
-      setParsedQuestions(questionData);
-      setProgress(100);
-    } catch (err) {
-      console.error("Error parsing spreadsheet:", err);
-      setError(err instanceof Error ? err.message : "Failed to parse the spreadsheet");
-    } finally {
-      setIsLoading(false);
-      // Reset the file input
-      event.target.value = '';
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      processFile(file);
+      setActiveTab("review");
     }
-  };
-
-  const transformRowToQuestion = (row: SpreadsheetQuestion, subjects: Subject[]): QuestionFormData => {
-    // Ensure Subject exists and is a string before trying to access toLowerCase
-    if (!row.Subject) {
-      throw new Error("Missing Subject in spreadsheet row");
-    }
-    
-    const subjectName = String(row.Subject).trim();
-    if (!subjectName) {
-      throw new Error("Empty Subject in spreadsheet row");
-    }
-    
-    // Find subject ID by title with safe string comparison
-    const subject = subjects.find(s => 
-      s.title.toLowerCase() === subjectName.toLowerCase()
-    );
-    
-    if (!subject) {
-      throw new Error(`Subject not found: ${subjectName}`);
-    }
-    
-    // Determine question type with null check
-    let questionType = QuestionType.MULTIPLE_CHOICE;
-    if (row["Question Type"]) {
-      const questionTypeStr = String(row["Question Type"]).toLowerCase();
-      if (questionTypeStr.includes("true") || questionTypeStr.includes("false")) {
-        questionType = QuestionType.TRUE_FALSE;
-      } else if (questionTypeStr.includes("multiple answer")) {
-        questionType = QuestionType.MULTIPLE_ANSWER;
-      }
-    }
-    
-    // Parse difficulty level with proper number handling
-    let difficultyLevel = DifficultyLevel.MEDIUM;
-    if (row["Difficulty Level"] !== undefined && row["Difficulty Level"] !== null) {
-      if (typeof row["Difficulty Level"] === "number") {
-        switch (row["Difficulty Level"]) {
-          case 1:
-            difficultyLevel = DifficultyLevel.EASY;
-            break;
-          case 2:
-            difficultyLevel = DifficultyLevel.MEDIUM;
-            break;
-          case 3:
-            difficultyLevel = DifficultyLevel.HARD;
-            break;
-        }
-      } else if (typeof row["Difficulty Level"] === "string") {
-        const difficultyStr = row["Difficulty Level"].toLowerCase();
-        if (difficultyStr.includes("easy") || difficultyStr === "1") {
-          difficultyLevel = DifficultyLevel.EASY;
-        } else if (difficultyStr.includes("hard") || difficultyStr === "3") {
-          difficultyLevel = DifficultyLevel.HARD;
-        }
-      }
-    }
-    
-    // Create options and mark correct ones with proper null checks
-    const options = [];
-    
-    // Helper function to safely check if an option is correct
-    const isOptionCorrect = (optionValue: string | undefined, optionNumber: number | string): boolean => {
-      if (optionValue === undefined) return false;
-      
-      if (row["Correct Option"] === undefined || row["Correct Option"] === null) return false;
-      
-      // Check if correct option is specified by number
-      if (row["Correct Option"] === optionNumber || row["Correct Option"] === String(optionNumber)) {
-        return true;
-      }
-      
-      // Check if correct option is specified by text
-      if (typeof row["Correct Option"] === "string" && typeof optionValue === "string") {
-        return row["Correct Option"].toLowerCase() === optionValue.toLowerCase();
-      }
-      
-      return false;
-    };
-    
-    // Add each option that exists in the row with null checks
-    if (row["Option 1"]) {
-      options.push({ 
-        id: uuidv4(), 
-        text: String(row["Option 1"]), 
-        isCorrect: isOptionCorrect(row["Option 1"], 1) 
-      });
-    }
-    
-    if (row["Option 2"]) {
-      options.push({ 
-        id: uuidv4(), 
-        text: String(row["Option 2"]), 
-        isCorrect: isOptionCorrect(row["Option 2"], 2) 
-      });
-    }
-    
-    if (row["Option 3"]) {
-      options.push({ 
-        id: uuidv4(), 
-        text: String(row["Option 3"]), 
-        isCorrect: isOptionCorrect(row["Option 3"], 3) 
-      });
-    }
-    
-    if (row["Option 4"]) {
-      options.push({ 
-        id: uuidv4(), 
-        text: String(row["Option 4"]), 
-        isCorrect: isOptionCorrect(row["Option 4"], 4) 
-      });
-    }
-    
-    if (questionType === QuestionType.TRUE_FALSE && options.length === 0) {
-      // For true/false questions with no options specified
-      const correctOption = row["Correct Option"];
-      const isTrue = typeof correctOption === "string" && correctOption.toLowerCase() === "true";
-      
-      options.push({ id: uuidv4(), text: "True", isCorrect: isTrue });
-      options.push({ id: uuidv4(), text: "False", isCorrect: !isTrue });
-    }
-    
-    if (!row["Question Text"]) {
-      throw new Error("Missing Question Text in spreadsheet");
-    }
-    
-    return {
-      text: String(row["Question Text"]),
-      type: questionType,
-      subjectId: subject.id,
-      difficultyLevel,
-      options,
-      explanation: row["Explanation"] ? String(row["Explanation"]) : undefined
-    };
-  };
-
-  const handleImport = async () => {
-    if (parsedQuestions.length === 0) return;
-    
-    setIsLoading(true);
-    try {
-      await onImport(parsedQuestions);
-      toast.success(`Successfully imported ${parsedQuestions.length} questions`);
-      handleOpenChange(false);
-    } catch (err) {
-      console.error("Error importing questions:", err);
-      setError("Failed to import questions");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const downloadTemplate = () => {
-    // Create template data
-    const templateData = [
-      {
-        "Subject": "Example Subject Name",
-        "Question Type": "multiple_choice", // or "true_false" or "multiple_answer"
-        "Question Text": "What is the capital of France?",
-        "Option 1": "Paris",
-        "Option 2": "London",
-        "Option 3": "Berlin",
-        "Option 4": "Madrid",
-        "Correct Option": 1, // can be 1, 2, 3, 4 or the actual text of the option
-        "Difficulty Level": "easy", // or "medium" or "hard" or 1, 2, 3
-        "Explanation": "Paris is the capital and most populous city of France."
-      },
-      {
-        "Subject": "Example Subject Name",
-        "Question Type": "true_false",
-        "Question Text": "The Earth is flat.",
-        "Option 1": "True",
-        "Option 2": "False",
-        "Correct Option": "False",
-        "Difficulty Level": "easy",
-        "Explanation": "The Earth is approximately spherical in shape."
-      }
-    ];
-    
-    // Create worksheet
-    const ws = utils.json_to_sheet(templateData);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, "Template");
-    
-    // Generate and download
-    const buf = write(wb, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([buf], { type: "application/octet-stream" });
-    
-    // Create download link
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "questions_import_template.xlsx";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
   
+  const handleImport = async () => {
+    if (parsedQuestions.length > 0) {
+      await onImport(parsedQuestions);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={onDialogOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import Questions</DialogTitle>
           <DialogDescription>
-            Upload a spreadsheet with your questions or download a template to get started.
+            Import questions from a spreadsheet file (Excel, CSV).
           </DialogDescription>
         </DialogHeader>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="upload">Upload</TabsTrigger>
-            <TabsTrigger value="template">Template</TabsTrigger>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid grid-cols-2">
+            <TabsTrigger value="upload">Upload File</TabsTrigger>
+            <TabsTrigger 
+              value="review" 
+              disabled={parsedQuestions.length === 0}
+            >
+              Review ({parsedQuestions.length})
+            </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="upload" className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            {parsedQuestions.length === 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-center w-full">
-                  <label htmlFor="spreadsheet-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <FileSpreadsheet className="w-10 h-10 mb-3 text-gray-400" />
-                      <p className="mb-2 text-sm text-gray-500">
-                        <span className="font-semibold">Click to upload</span> or drag and drop
+
+          <TabsContent value="upload" className="py-4">
+            <div className="space-y-6">
+              <div className="grid gap-4">
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg h-60 bg-gray-50 dark:bg-gray-900">
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <FileSpreadsheet className="h-10 w-10 text-gray-400" />
+                    <div className="text-center space-y-1">
+                      <p className="text-sm font-medium">Upload Spreadsheet File</p>
+                      <p className="text-xs text-gray-500">
+                        Upload XLSX, XLS, or CSV file with your questions
                       </p>
-                      <p className="text-xs text-gray-500">XLSX or CSV (Excel spreadsheet)</p>
                     </div>
+                    <Button variant="outline" className="mt-2" disabled={isLoading}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Choose File
+                    </Button>
+                  </div>
+                  <label className="cursor-pointer absolute inset-0">
                     <input 
-                      id="spreadsheet-upload" 
                       type="file" 
                       className="hidden" 
                       accept=".xlsx,.xls,.csv" 
@@ -364,78 +114,91 @@ const ImportQuestionsDialog = ({
                     <p className="text-sm text-center text-muted-foreground">Processing file...</p>
                   </div>
                 )}
-
-                <div className="text-center">
-                  <Button variant="outline" size="sm" onClick={() => setActiveTab("template")}>
-                    Need a template? Click here
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-md">
-                  <p className="font-medium">Preview:</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {parsedQuestions.length} questions found in the spreadsheet.
-                  </p>
-                  <ul className="mt-2 text-sm list-disc pl-5">
-                    {parsedQuestions.slice(0, 3).map((q, idx) => (
-                      <li key={idx} className="truncate">
-                        {q.text.substring(0, 50)}{q.text.length > 50 ? "..." : ""}
-                      </li>
-                    ))}
-                    {parsedQuestions.length > 3 && (
-                      <li className="italic">And {parsedQuestions.length - 3} more...</li>
-                    )}
-                  </ul>
-                </div>
                 
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => resetState()}>
-                    Change File
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="whitespace-pre-wrap text-sm">
+                      {error}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="font-medium">Format Requirements</h4>
+                <p className="text-sm text-gray-500">
+                  Your spreadsheet should have the following columns:
+                </p>
+                <ul className="list-disc pl-5 text-sm text-gray-500 space-y-1">
+                  <li><strong>question</strong> - The text of the question</li>
+                  <li><strong>type</strong> - Question type (multiple_choice, true_false, multiple_answer)</li>
+                  <li><strong>subject</strong> - The subject name (must match existing subject)</li>
+                  <li><strong>difficulty</strong> - easy, medium, or hard (optional, defaults to medium)</li>
+                  <li><strong>options</strong> - Options for answers (separate by semicolon or new line)</li>
+                  <li><strong>correctAnswers</strong> - Text that identifies correct options</li>
+                  <li><strong>explanation</strong> - Explanation of the answer (optional)</li>
+                </ul>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="review" className="py-4">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">
+                  {parsedQuestions.length} Questions Ready to Import
+                </h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setActiveTab("upload")}>
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
                   </Button>
                   <Button 
                     onClick={handleImport}
-                    disabled={isLoading}
+                    disabled={isLoading || parsedQuestions.length === 0}
                   >
-                    {isLoading ? "Importing..." : "Import Questions"}
+                    {isLoading ? (
+                      "Importing..."
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Import Questions
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="template" className="space-y-4">
-            <div className="p-4 bg-muted rounded-md">
-              <h3 className="font-medium mb-2">Template Format</h3>
-              <p className="text-sm mb-3">
-                Your spreadsheet should include these columns:
-              </p>
-              <ul className="text-sm list-disc pl-5 space-y-1">
-                <li><strong>Subject</strong>: Must match an existing subject name exactly</li>
-                <li><strong>Question Type</strong>: "multiple_choice", "true_false", or "multiple_answer"</li>
-                <li><strong>Question Text</strong>: The actual question</li>
-                <li><strong>Option 1-4</strong>: Possible answers</li>
-                <li><strong>Correct Option</strong>: Number (1-4) or the text of the correct option</li> 
-                <li><strong>Difficulty Level</strong>: "easy", "medium", "hard" (or 1, 2, 3)</li>
-                <li><strong>Explanation</strong>: Optional explanation for the answer</li>
-              </ul>
-            </div>
-            
-            <div className="flex justify-center">
-              <Button 
-                onClick={downloadTemplate}
-                className="flex items-center gap-2"
-              >
-                <Download size={16} />
-                Download Template
-              </Button>
-            </div>
-            
-            <div className="text-center mt-4">
-              <Button variant="outline" size="sm" onClick={() => setActiveTab("upload")}>
-                Back to Upload
-              </Button>
+              
+              <div className="border rounded-lg overflow-hidden">
+                <div className="max-h-[400px] overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left">Question</th>
+                        <th className="px-4 py-2 text-left">Type</th>
+                        <th className="px-4 py-2 text-left">Subject</th>
+                        <th className="px-4 py-2 text-left">Difficulty</th>
+                        <th className="px-4 py-2 text-left">Options</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parsedQuestions.map((question, index) => {
+                        const subject = subjects.find(s => s.id === question.subjectId);
+                        return (
+                          <tr key={index} className="border-t">
+                            <td className="px-4 py-2 max-w-[300px] truncate">{question.text}</td>
+                            <td className="px-4 py-2">{question.type}</td>
+                            <td className="px-4 py-2">{subject?.title || ''}</td>
+                            <td className="px-4 py-2">{question.difficultyLevel}</td>
+                            <td className="px-4 py-2">{question.options.length} options</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

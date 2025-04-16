@@ -75,6 +75,7 @@ const QuestionsPage = () => {
       // Explicitly refresh the questions list after import
       await fetchQuestions();
       
+      setIsImportDialogOpen(false); // Close the dialog after import
       return Promise.resolve();
     } catch (error) {
       console.error("Error in batch import:", error);
@@ -151,6 +152,7 @@ const QuestionsPage = () => {
         onOpenChange={setIsImportDialogOpen}
         subjects={subjects}
         onImport={handleImportQuestions}
+        isLoading={importLoading}
       />
     </InstructorLayout>
   );

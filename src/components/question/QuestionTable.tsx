@@ -1,12 +1,12 @@
 
-import { useState } from "react";
-import { Question } from "@/types/question.types";
+import { useState, useMemo } from "react";
+import { Question, DifficultyLevel } from "@/types/question.types";
 import { Subject } from "@/types/subject.types";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import QuestionActions from "./table/QuestionActions";
 import QuestionTableHeader from "./table/QuestionTableHeader";
+import QuestionActions from "./table/QuestionActions";
+import QuestionTablePagination from "./table/QuestionTablePagination";
 
 interface QuestionTableProps {
   questions: Question[];
@@ -15,95 +15,154 @@ interface QuestionTableProps {
 
 const QuestionTable = ({ questions, subjects }: QuestionTableProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>(questions);
+  const [filterSubject, setFilterSubject] = useState("all-subjects");
+  const [filterDifficulty, setFilterDifficulty] = useState("all-difficulty");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  // Update filtered questions when search query or questions change
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    
-    const filtered = questions.filter(question =>
-      question.text.toLowerCase().includes(query.toLowerCase())
-    );
-    
-    setFilteredQuestions(filtered);
+  // Get the subject titles by ID for display
+  const subjectMap = useMemo(() => {
+    const map = new Map<string, string>();
+    subjects.forEach(subject => map.set(subject.id, subject.title));
+    return map;
+  }, [subjects]);
+
+  // Filter questions by search query and selected filters
+  const filteredQuestions = useMemo(() => {
+    return questions.filter(question => {
+      // Filter by search query
+      const matchesSearch = searchQuery === "" || 
+        question.text.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Filter by subject
+      const matchesSubject = filterSubject === "all-subjects" || 
+        question.subjectId === filterSubject;
+        
+      // Filter by difficulty
+      const matchesDifficulty = filterDifficulty === "all-difficulty" || 
+        question.difficultyLevel === filterDifficulty;
+        
+      return matchesSearch && matchesSubject && matchesDifficulty;
+    });
+  }, [questions, searchQuery, filterSubject, filterDifficulty]);
+
+  // Apply pagination
+  const paginatedQuestions = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredQuestions.slice(startIndex, startIndex + pageSize);
+  }, [filteredQuestions, currentPage, pageSize]);
+
+  // Calculate total pages based on filtered results and page size
+  const totalPages = Math.max(1, Math.ceil(filteredQuestions.length / pageSize));
+
+  // Reset to first page when filters change
+  const handleFilterChange = (subject: string) => {
+    setFilterSubject(subject);
+    setCurrentPage(1);
   };
 
-  // Initialize filtered questions with all questions
-  if (filteredQuestions.length !== questions.length && searchQuery === "") {
-    setFilteredQuestions(questions);
-  }
+  const handleDifficultyChange = (difficulty: string) => {
+    setFilterDifficulty(difficulty);
+    setCurrentPage(1);
+  };
 
-  // Get subject title by ID
-  const getSubjectTitle = (subjectId: string) => {
-    const subject = subjects.find(s => s.id === subjectId);
-    return subject ? subject.title : "Unknown Subject";
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: string) => {
+    setPageSize(Number(size));
+    setCurrentPage(1);
+  };
+
+  // Helper function to get difficulty badge color
+  const getDifficultyColor = (level: DifficultyLevel) => {
+    switch (level) {
+      case DifficultyLevel.EASY:
+        return "bg-green-100 text-green-800";
+      case DifficultyLevel.MEDIUM:
+        return "bg-yellow-100 text-yellow-800";
+      case DifficultyLevel.HARD:
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="w-full">
-          <Input
-            placeholder="Search questions..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full"
-          />
-        </div>
-      </div>
+      <QuestionTableHeader
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        filterSubject={filterSubject}
+        onFilterChange={handleFilterChange}
+        subjects={subjects}
+        filterDifficulty={filterDifficulty}
+        onDifficultyChange={handleDifficultyChange}
+      />
 
-      <div className="rounded-md border">
+      <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50%]">Question</TableHead>
-              <TableHead>Subject</TableHead>
+              <TableHead>Question</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Subject</TableHead>
               <TableHead>Difficulty</TableHead>
+              <TableHead>Options</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredQuestions.length > 0 ? (
-              filteredQuestions.map((question) => (
+            {paginatedQuestions.length > 0 ? (
+              paginatedQuestions.map((question) => (
                 <TableRow key={question.id}>
-                  <TableCell className="font-medium max-w-[400px] truncate">
+                  <TableCell className="font-medium max-w-[300px] truncate">
                     {question.text}
                   </TableCell>
-                  <TableCell>{getSubjectTitle(question.subjectId)}</TableCell>
-                  <TableCell>{question.type}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        question.difficultyLevel === "easy"
-                          ? "bg-green-100 text-green-800 hover:bg-green-100 hover:text-green-800"
-                          : question.difficultyLevel === "medium"
-                          ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-800"
-                          : "bg-red-100 text-red-800 hover:bg-red-100 hover:text-red-800"
-                      }
-                    >
+                    {question.type === "multiple_choice"
+                      ? "Multiple Choice"
+                      : question.type === "true_false"
+                      ? "True/False"
+                      : "Multiple Answer"}
+                  </TableCell>
+                  <TableCell>{subjectMap.get(question.subjectId)}</TableCell>
+                  <TableCell>
+                    <Badge className={getDifficultyColor(question.difficultyLevel)}>
                       {question.difficultyLevel}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <QuestionActions 
-                      question={question} 
-                      subjects={subjects}
-                    />
+                  <TableCell>{question.options.length}</TableCell>
+                  <TableCell>
+                    <QuestionActions question={question} subjects={subjects} />
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  No questions found.
+                <TableCell colSpan={6} className="h-24 text-center">
+                  No questions found. Try adjusting your filters.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      <QuestionTablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={filteredQuestions.length}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </div>
   );
 };

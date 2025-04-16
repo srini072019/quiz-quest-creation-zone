@@ -13,22 +13,28 @@ interface QuestionPreviewProps {
 
 const QuestionPreview = ({ question }: QuestionPreviewProps) => {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [showAnswer, setShowAnswer] = useState(false);
   
-  // Reset selected options when question changes
+  // Reset selected options and answer visibility when question changes
   useEffect(() => {
     setSelectedOptions([]);
+    setShowAnswer(false);
   }, [question]);
   
   const handleSingleOptionChange = (value: string) => {
-    setSelectedOptions([value]);
+    if (!showAnswer) {  // Only allow changes when not showing answer
+      setSelectedOptions([value]);
+    }
   };
 
   const handleMultipleOptionChange = (optionId: string) => {
-    setSelectedOptions(prev => 
-      prev.includes(optionId)
-        ? prev.filter(id => id !== optionId)
-        : [...prev, optionId]
-    );
+    if (!showAnswer) {  // Only allow changes when not showing answer
+      setSelectedOptions(prev => 
+        prev.includes(optionId)
+          ? prev.filter(id => id !== optionId)
+          : [...prev, optionId]
+      );
+    }
   };
 
   const handleCheckAnswer = () => {
@@ -38,6 +44,24 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
       .map(option => option.id);
       
     setSelectedOptions(correctOptions);
+    setShowAnswer(true);
+  };
+
+  const getOptionClass = (optionId: string, isCorrect: boolean) => {
+    if (!showAnswer) {
+      return selectedOptions.includes(optionId) ? "bg-blue-50 border border-blue-200" : "";
+    }
+    
+    if (isCorrect) {
+      return "bg-green-50 border border-green-200";
+    }
+    
+    // If the user selected an incorrect option
+    if (selectedOptions.includes(optionId) && !isCorrect) {
+      return "bg-red-50 border border-red-200";
+    }
+    
+    return "";
   };
 
   return (
@@ -58,16 +82,19 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
                   question.options.map((option) => (
                     <div 
                       key={option.id} 
-                      className={`flex items-center space-x-2 p-2 rounded ${
-                        selectedOptions.includes(option.id) && option.isCorrect 
-                          ? "bg-green-50 border border-green-200" 
-                          : selectedOptions.includes(option.id) && !option.isCorrect
-                          ? "bg-red-50 border border-red-200"
-                          : ""
-                      }`}
+                      className={`flex items-center space-x-2 p-2 rounded ${getOptionClass(option.id, option.isCorrect)}`}
                     >
-                      <RadioGroupItem value={option.id} id={option.id} />
-                      <Label htmlFor={option.id}>{option.text}</Label>
+                      <RadioGroupItem 
+                        value={option.id} 
+                        id={option.id} 
+                        disabled={showAnswer}
+                      />
+                      <Label htmlFor={option.id}>
+                        {option.text}
+                        {showAnswer && option.isCorrect && (
+                          <span className="ml-2 text-green-600 font-medium">(Correct)</span>
+                        )}
+                      </Label>
                     </div>
                   ))
                 ) : (
@@ -82,20 +109,20 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
                   question.options.map((option) => (
                     <div 
                       key={option.id} 
-                      className={`flex items-center space-x-2 p-2 rounded ${
-                        selectedOptions.includes(option.id) && option.isCorrect 
-                          ? "bg-green-50 border border-green-200" 
-                          : selectedOptions.includes(option.id) && !option.isCorrect
-                          ? "bg-red-50 border border-red-200"
-                          : ""
-                      }`}
+                      className={`flex items-center space-x-2 p-2 rounded ${getOptionClass(option.id, option.isCorrect)}`}
                     >
                       <Checkbox 
                         id={option.id} 
                         checked={selectedOptions.includes(option.id)}
                         onCheckedChange={() => handleMultipleOptionChange(option.id)}
+                        disabled={showAnswer}
                       />
-                      <Label htmlFor={option.id}>{option.text}</Label>
+                      <Label htmlFor={option.id}>
+                        {option.text}
+                        {showAnswer && option.isCorrect && (
+                          <span className="ml-2 text-green-600 font-medium">(Correct)</span>
+                        )}
+                      </Label>
                     </div>
                   ))
                 ) : (
@@ -113,16 +140,19 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
                   question.options.map((option) => (
                     <div 
                       key={option.id} 
-                      className={`flex items-center space-x-2 p-2 rounded ${
-                        selectedOptions.includes(option.id) && option.isCorrect 
-                          ? "bg-green-50 border border-green-200" 
-                          : selectedOptions.includes(option.id) && !option.isCorrect
-                          ? "bg-red-50 border border-red-200"
-                          : ""
-                      }`}
+                      className={`flex items-center space-x-2 p-2 rounded ${getOptionClass(option.id, option.isCorrect)}`}
                     >
-                      <RadioGroupItem value={option.id} id={option.id} />
-                      <Label htmlFor={option.id}>{option.text}</Label>
+                      <RadioGroupItem 
+                        value={option.id} 
+                        id={option.id}
+                        disabled={showAnswer}
+                      />
+                      <Label htmlFor={option.id}>
+                        {option.text}
+                        {showAnswer && option.isCorrect && (
+                          <span className="ml-2 text-green-600 font-medium">(Correct)</span>
+                        )}
+                      </Label>
                     </div>
                   ))
                 ) : (
@@ -134,7 +164,7 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
         </CardContent>
       </Card>
 
-      {question.explanation && selectedOptions.length > 0 && (
+      {question.explanation && showAnswer && (
         <div className="bg-blue-50 p-4 rounded-lg">
           <h4 className="font-medium mb-1">Explanation:</h4>
           <p className="text-sm text-gray-700">{question.explanation}</p>
@@ -142,7 +172,10 @@ const QuestionPreview = ({ question }: QuestionPreviewProps) => {
       )}
 
       <div className="flex justify-end">
-        <Button onClick={handleCheckAnswer}>
+        <Button 
+          onClick={handleCheckAnswer} 
+          disabled={showAnswer}
+        >
           Show Answer
         </Button>
       </div>

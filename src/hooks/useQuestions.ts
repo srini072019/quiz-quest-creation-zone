@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Question, QuestionFormData, QuestionType, DifficultyLevel } from "@/types/question.types";
@@ -232,7 +233,7 @@ export const useQuestions = (subjectId?: string) => {
     questions,
     isLoading,
     createQuestion,
-    updateQuestion: deleteQuestion,
+    updateQuestion,
     deleteQuestion,
     fetchQuestions,
   };
