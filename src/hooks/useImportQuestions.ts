@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { read, utils, writeFileXLSX } from "xlsx";
@@ -110,7 +111,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
                   row[headers.indexOf('Option D')]
                 ].filter(opt => opt !== ""),
                 correctAnswers: row[headers.indexOf('Correct Option')],
-                difficulty: row[headers.indexOf('Difficulty')]
+                difficulty: row[headers.indexOf('Difficulty')] || "" // Handle case when difficulty is empty
               };
               
               // Validate required fields
@@ -146,12 +147,12 @@ export const useImportQuestions = (subjects: Subject[]) => {
                 return;
               }
               
-              // Create question object
+              // Create question object with the provided difficulty (not defaulting to medium)
               const question: QuestionFormData = {
                 text: rowData.question,
                 type: questionType,
                 subjectId,
-                difficultyLevel: mapToDifficultyLevel(rowData.difficulty || "medium"),
+                difficultyLevel: mapToDifficultyLevel(rowData.difficulty), // Use the provided difficulty
                 options,
                 explanation: ""
               };
@@ -222,7 +223,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
           "Option C": "Berlin",
           "Option D": "Madrid",
           "Correct Option": "A",
-          Difficulty: "medium"
+          Difficulty: "easy"
         },
         {
           Subject: subjects.length > 0 ? subjects[0].title : "Enter Subject Name",
@@ -233,7 +234,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
           "Option C": "",
           "Option D": "",
           "Correct Option": "B",
-          Difficulty: "easy"
+          Difficulty: "medium"
         },
         {
           Subject: subjects.length > 0 ? subjects[0].title : "Enter Subject Name",
@@ -244,7 +245,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
           "Option C": "Cat",
           "Option D": "Spider",
           "Correct Option": "A, C",
-          Difficulty: "medium"
+          Difficulty: "hard"
         }
       ];
 
