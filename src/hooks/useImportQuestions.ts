@@ -6,16 +6,6 @@ import { QuestionFormData, QuestionType, DifficultyLevel } from "@/types/questio
 import { Subject } from "@/types/subject.types";
 import { mapToQuestionType, mapToDifficultyLevel } from "@/utils/questionUtils";
 
-interface SpreadsheetQuestion {
-  question: string;
-  type: string;
-  subject: string;
-  difficulty: string;
-  explanation?: string;
-  correctAnswers: string;
-  options: string;
-}
-
 export const useImportQuestions = (subjects: Subject[]) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,16 +18,6 @@ export const useImportQuestions = (subjects: Subject[]) => {
     setParsedQuestions([]);
   };
 
-  const validateRequiredFields = (row: any): string | null => {
-    const requiredFields = ["question", "type", "subject", "options"];
-    for (const field of requiredFields) {
-      if (!row[field]) {
-        return `Missing required field: ${field}`;
-      }
-    }
-    return null;
-  };
-
   const findSubjectId = (subjectName: string): string | null => {
     const subject = subjects.find(s => 
       s.title.toLowerCase().trim() === subjectName.toLowerCase().trim()
@@ -45,34 +25,36 @@ export const useImportQuestions = (subjects: Subject[]) => {
     return subject ? subject.id : null;
   };
 
-  const parseOptions = (optionsString: string, correctAnswers: string, type: QuestionType) => {
-    // Split options by line break or semicolon
-    const optionsList = optionsString
-      .split(/[;\n]/)
-      .map(option => option.trim())
-      .filter(option => option.length > 0);
-
+  const parseOptions = (optionsArray: string[], correctAnswers: string, type: QuestionType) => {
     // For true/false, ensure we have only 'true' and 'false' options
     if (type === QuestionType.TRUE_FALSE) {
       return [
-        { id: crypto.randomUUID(), text: "True", isCorrect: correctAnswers.toLowerCase().includes("true") },
-        { id: crypto.randomUUID(), text: "False", isCorrect: correctAnswers.toLowerCase().includes("false") }
+        { id: crypto.randomUUID(), text: "True", isCorrect: correctAnswers.toLowerCase().includes("true") || correctAnswers.includes("A") || correctAnswers.includes("1") },
+        { id: crypto.randomUUID(), text: "False", isCorrect: correctAnswers.toLowerCase().includes("false") || correctAnswers.includes("B") || correctAnswers.includes("2") }
       ];
     }
 
-    // For other question types, parse the options and mark correct ones
-    return optionsList.map(option => {
-      const isCorrect = correctAnswers
-        .split(/[,;\n]/)
-        .map(answer => answer.trim().toLowerCase())
-        .some(answer => option.toLowerCase().includes(answer));
+    // For other question types, parse the options and mark correct ones based on the correct option letters/numbers
+    const correctOptionLetters = correctAnswers
+      .split(/[,;\s]/)
+      .map(answer => answer.trim().toUpperCase())
+      .filter(answer => answer.length > 0);
 
-      return {
-        id: crypto.randomUUID(),
-        text: option,
-        isCorrect
-      };
-    });
+    return optionsArray
+      .filter(option => option !== "")
+      .map((option, index) => {
+        const optionLetter = String.fromCharCode(65 + index); // A, B, C, D...
+        const optionNumber = String(index + 1); // 1, 2, 3, 4...
+        
+        const isCorrect = correctOptionLetters.includes(optionLetter) || 
+                          correctOptionLetters.includes(optionNumber);
+
+        return {
+          id: crypto.randomUUID(),
+          text: option,
+          isCorrect
+        };
+      });
   };
 
   const parseFileData = async (file: File): Promise<QuestionFormData[]> => {
@@ -91,68 +73,87 @@ export const useImportQuestions = (subjects: Subject[]) => {
           const worksheet = workbook.Sheets[firstSheetName];
           const jsonData = utils.sheet_to_json(worksheet, { header: 1, defval: "" });
           
-          // Remove header row
-          const headers = jsonData.shift() as string[];
-          
+          // Remove header row if present
+          if (jsonData.length === 0) {
+            throw new Error("No data found in the file");
+          }
+
+          const headers = jsonData[0] as string[];
+          const requiredHeaders = [
+            'Subject', 'Question Type', 'Question Text', 
+            'Option A', 'Option B', 'Correct Option'
+          ];
+
+          // Validate headers
+          const missingHeaders = requiredHeaders.filter(
+            header => !headers.includes(header)
+          );
+
+          if (missingHeaders.length > 0) {
+            throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
+          }
+
+          // Process data rows
           const questions: QuestionFormData[] = [];
           const errors: string[] = [];
           
-          jsonData.forEach((row: any, index: number) => {
+          // Skip header row and process each row
+          for (let i = 1; i < jsonData.length; i++) {
             try {
-              // Map columns to our expected format
-              const rowData = {
-                subject: row[headers.indexOf('Subject')],
-                type: row[headers.indexOf('Question Type')],
-                question: row[headers.indexOf('Question Text')],
-                options: [
-                  row[headers.indexOf('Option A')],
-                  row[headers.indexOf('Option B')],
-                  row[headers.indexOf('Option C')],
-                  row[headers.indexOf('Option D')]
-                ].filter(opt => opt !== ""),
-                correctAnswers: row[headers.indexOf('Correct Option')],
-                difficulty: row[headers.indexOf('Difficulty')] || "" // Handle case when difficulty is empty
-              };
+              const row = jsonData[i] as any[];
+              if (row.length === 0 || row.every(cell => cell === "")) {
+                continue; // Skip empty rows
+              }
+
+              // Extract data from the row
+              const subject = row[headers.indexOf('Subject')];
+              const questionType = row[headers.indexOf('Question Type')];
+              const questionText = row[headers.indexOf('Question Text')];
+              const optionA = row[headers.indexOf('Option A')];
+              const optionB = row[headers.indexOf('Option B')];
+              const optionC = headers.indexOf('Option C') >= 0 ? row[headers.indexOf('Option C')] : "";
+              const optionD = headers.indexOf('Option D') >= 0 ? row[headers.indexOf('Option D')] : "";
+              const correctOption = row[headers.indexOf('Correct Option')];
+              const difficulty = headers.indexOf('Difficulty') >= 0 ? row[headers.indexOf('Difficulty')] : "";
               
-              // Validate required fields
-              if (!rowData.subject || !rowData.type || !rowData.question) {
-                errors.push(`Row ${index + 2}: Missing required fields`);
-                return;
+              // Basic validation
+              if (!subject || !questionType || !questionText || !optionA || !optionB || !correctOption) {
+                errors.push(`Row ${i + 1}: Missing required fields`);
+                continue;
               }
               
               // Find subject ID
-              const subjectId = findSubjectId(rowData.subject);
+              const subjectId = findSubjectId(subject);
               if (!subjectId) {
-                errors.push(`Row ${index + 2}: Subject not found: ${rowData.subject}`);
-                return;
+                errors.push(`Row ${i + 1}: Subject not found: ${subject}`);
+                continue;
               }
               
               // Map question type
-              const questionType = mapToQuestionType(rowData.type);
+              const mappedQuestionType = mapToQuestionType(questionType);
               
-              // Parse options and correct answers
-              const options = rowData.options.map((option, optIndex) => ({
-                id: crypto.randomUUID(),
-                text: option,
-                isCorrect: isOptionCorrect(rowData.correctAnswers, optIndex)
-              }));
+              // Create options array
+              const optionsArray = [optionA, optionB, optionC, optionD].filter(opt => opt !== "");
               
-              if (options.length === 0) {
-                errors.push(`Row ${index + 2}: No valid options found`);
-                return;
+              if (optionsArray.length < 2) {
+                errors.push(`Row ${i + 1}: At least two options are required`);
+                continue;
               }
+              
+              // Parse options and mark correct answers
+              const options = parseOptions(optionsArray, correctOption, mappedQuestionType);
               
               if (!options.some(opt => opt.isCorrect)) {
-                errors.push(`Row ${index + 2}: No correct answer specified`);
-                return;
+                errors.push(`Row ${i + 1}: No correct answer specified or invalid correct option format`);
+                continue;
               }
               
-              // Create question object with the provided difficulty (not defaulting to medium)
+              // Create question object with provided difficulty
               const question: QuestionFormData = {
-                text: rowData.question,
-                type: questionType,
+                text: questionText,
+                type: mappedQuestionType,
                 subjectId,
-                difficultyLevel: mapToDifficultyLevel(rowData.difficulty), // Use the provided difficulty
+                difficultyLevel: mapToDifficultyLevel(difficulty),
                 options,
                 explanation: ""
               };
@@ -160,9 +161,9 @@ export const useImportQuestions = (subjects: Subject[]) => {
               questions.push(question);
               
             } catch (err) {
-              errors.push(`Row ${index + 2}: ${(err as Error).message}`);
+              errors.push(`Row ${i + 1}: ${(err as Error).message}`);
             }
-          });
+          }
           
           if (errors.length > 0) {
             setError(`Found ${errors.length} errors:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n...and ${errors.length - 5} more errors` : ''}`);
@@ -276,19 +277,6 @@ export const useImportQuestions = (subjects: Subject[]) => {
       console.error("Error downloading template:", error);
       toast.error("Failed to download template");
     }
-  };
-
-  const isOptionCorrect = (correctAnswers: string, optionIndex: number): boolean => {
-    if (!correctAnswers) return false;
-    
-    // Convert to uppercase letters or numbers
-    const correctOptions = correctAnswers.split(/[,;]/)
-      .map(opt => opt.trim().toUpperCase());
-    
-    // Check if the option matches any of the correct options
-    const optionLabels = ['A', 'B', 'C', 'D'];
-    return correctOptions.includes(optionLabels[optionIndex]) || 
-           correctOptions.includes(`${optionIndex + 1}`);
   };
 
   return {
