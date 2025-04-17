@@ -1,5 +1,6 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Download } from "lucide-react";
 
 const ImportTemplateInfo = () => {
   return (
@@ -65,6 +66,7 @@ const ImportTemplateInfo = () => {
           <li>For true/false questions, options should be "True" and "False"</li>
           <li>For multiple_answer questions, include multiple values in correctAnswers separated by semicolons</li>
           <li>Subject names must exactly match existing subjects in your course</li>
+          <li>Click the "Download Template" button at the top to get a pre-filled example spreadsheet</li>
         </ul>
       </div>
     </div>

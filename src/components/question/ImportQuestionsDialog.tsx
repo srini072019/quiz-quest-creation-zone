@@ -62,6 +62,10 @@ const ImportQuestionsDialog = ({
     }
   };
 
+  const handleDownloadTemplate = () => {
+    downloadTemplate();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onDialogOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -77,7 +81,7 @@ const ImportQuestionsDialog = ({
             variant="outline" 
             size="sm" 
             className="flex items-center gap-2"
-            onClick={downloadTemplate}
+            onClick={handleDownloadTemplate}
           >
             <Download size={16} />
             Download Template

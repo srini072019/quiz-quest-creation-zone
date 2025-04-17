@@ -196,7 +196,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
 
   const downloadTemplate = () => {
     try {
-      // Create template data
+      // Create template data with examples for each question type
       const template = [
         {
           question: "What is the capital of France?",
@@ -245,7 +245,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
       
       ws['!cols'] = colWidths;
 
-      // Download
+      // Download the file
       writeFileXLSX(wb, "questions_import_template.xlsx");
       toast.success("Template downloaded successfully");
     } catch (error) {
