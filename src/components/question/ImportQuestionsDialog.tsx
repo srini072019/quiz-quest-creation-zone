@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, FileSpreadsheet, Check, Download, Upload, X } from "lucide-react";
+import { AlertTriangle, Check, Download, X } from "lucide-react";
 import { Subject } from "@/types/subject.types";
 import { QuestionFormData } from "@/types/question.types";
 import { useImportQuestions } from "@/hooks/useImportQuestions";
@@ -134,6 +134,15 @@ const ImportQuestionsDialog = ({
                   </Button>
                 </div>
               </div>
+              
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="whitespace-pre-wrap text-sm">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
               
               <ImportQuestionsReview 
                 questions={parsedQuestions} 

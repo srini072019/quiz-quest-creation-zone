@@ -178,6 +178,7 @@ export const useImportQuestions = (subjects: Subject[]) => {
       
       if (questions.length === 0) {
         toast.error("No valid questions found in the file");
+        setIsLoading(false);
         return;
       }
       
@@ -214,6 +215,15 @@ export const useImportQuestions = (subjects: Subject[]) => {
           options: "True;False",
           correctAnswers: "False",
           explanation: "The Earth is approximately spherical in shape."
+        },
+        {
+          question: "Which of the following are mammals?",
+          type: "multiple_answer",
+          subject: subjects.length > 0 ? subjects[0].title : "Enter a valid subject name",
+          difficulty: "medium",
+          options: "Dog;Fish;Cat;Spider",
+          correctAnswers: "Dog;Cat",
+          explanation: "Dogs and cats are mammals, while fish and spiders are not."
         }
       ];
 
@@ -221,6 +231,19 @@ export const useImportQuestions = (subjects: Subject[]) => {
       const ws = utils.json_to_sheet(template);
       const wb = utils.book_new();
       utils.book_append_sheet(wb, ws, "Questions Template");
+
+      // Set column widths
+      const colWidths = [
+        { wch: 35 }, // question
+        { wch: 15 }, // type
+        { wch: 20 }, // subject
+        { wch: 10 }, // difficulty
+        { wch: 30 }, // options
+        { wch: 20 }, // correctAnswers
+        { wch: 40 }  // explanation
+      ];
+      
+      ws['!cols'] = colWidths;
 
       // Download
       writeFileXLSX(wb, "questions_import_template.xlsx");
