@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { read, utils, writeFileXLSX } from "xlsx";
@@ -89,62 +88,78 @@ export const useImportQuestions = (subjects: Subject[]) => {
           const workbook = read(data, { type: 'binary' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          const jsonData = utils.sheet_to_json<SpreadsheetQuestion>(worksheet, { header: 2, defval: "" });
+          const jsonData = utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+          
+          // Remove header row
+          const headers = jsonData.shift() as string[];
           
           const questions: QuestionFormData[] = [];
           const errors: string[] = [];
           
-          jsonData.forEach((row, index) => {
+          jsonData.forEach((row: any, index: number) => {
             try {
-              // Skip header row if it exists and was not properly parsed
-              if (index === 0 && (row.question === "question" || !row.question)) {
+              // Map columns to our expected format
+              const rowData = {
+                subject: row[headers.indexOf('Subject')],
+                type: row[headers.indexOf('Question Type')],
+                question: row[headers.indexOf('Question Text')],
+                options: [
+                  row[headers.indexOf('Option A')],
+                  row[headers.indexOf('Option B')],
+                  row[headers.indexOf('Option C')],
+                  row[headers.indexOf('Option D')]
+                ].filter(opt => opt !== ""),
+                correctAnswers: row[headers.indexOf('Correct Option')],
+                difficulty: row[headers.indexOf('Difficulty')]
+              };
+              
+              // Validate required fields
+              if (!rowData.subject || !rowData.type || !rowData.question) {
+                errors.push(`Row ${index + 2}: Missing required fields`);
                 return;
               }
               
-              // Validate required fields
-              const validationError = validateRequiredFields(row);
-              if (validationError) {
-                errors.push(`Row ${index + 1}: ${validationError}`);
+              // Find subject ID
+              const subjectId = findSubjectId(rowData.subject);
+              if (!subjectId) {
+                errors.push(`Row ${index + 2}: Subject not found: ${rowData.subject}`);
                 return;
               }
               
               // Map question type
-              const questionType = mapToQuestionType(row.type);
-              
-              // Find subject ID
-              const subjectId = findSubjectId(row.subject);
-              if (!subjectId) {
-                errors.push(`Row ${index + 1}: Subject not found: ${row.subject}`);
-                return;
-              }
+              const questionType = mapToQuestionType(rowData.type);
               
               // Parse options and correct answers
-              const options = parseOptions(row.options, row.correctAnswers || "", questionType);
+              const options = rowData.options.map((option, optIndex) => ({
+                id: crypto.randomUUID(),
+                text: option,
+                isCorrect: isOptionCorrect(rowData.correctAnswers, optIndex)
+              }));
+              
               if (options.length === 0) {
-                errors.push(`Row ${index + 1}: No valid options found`);
+                errors.push(`Row ${index + 2}: No valid options found`);
                 return;
               }
               
               if (!options.some(opt => opt.isCorrect)) {
-                errors.push(`Row ${index + 1}: No correct answer specified`);
+                errors.push(`Row ${index + 2}: No correct answer specified`);
                 return;
               }
               
               // Create question object
               const question: QuestionFormData = {
-                text: row.question,
+                text: rowData.question,
                 type: questionType,
                 subjectId,
-                difficultyLevel: mapToDifficultyLevel(row.difficulty || "medium"),
+                difficultyLevel: mapToDifficultyLevel(rowData.difficulty || "medium"),
                 options,
-                explanation: row.explanation || ""
+                explanation: ""
               };
               
               questions.push(question);
-              setProgress(Math.round(((index + 1) / jsonData.length) * 100));
               
             } catch (err) {
-              errors.push(`Row ${index + 1}: ${(err as Error).message}`);
+              errors.push(`Row ${index + 2}: ${(err as Error).message}`);
             }
           });
           
@@ -196,34 +211,40 @@ export const useImportQuestions = (subjects: Subject[]) => {
 
   const downloadTemplate = () => {
     try {
-      // Create template data with examples for each question type
+      // Create template data with the specified format
       const template = [
         {
-          question: "What is the capital of France?",
-          type: "multiple_choice",
-          subject: subjects.length > 0 ? subjects[0].title : "Enter a valid subject name",
-          difficulty: "medium",
-          options: "Paris;London;Berlin;Madrid",
-          correctAnswers: "Paris",
-          explanation: "Paris is the capital and largest city of France."
+          Subject: subjects.length > 0 ? subjects[0].title : "Enter Subject Name",
+          "Question Type": "multiple_choice",
+          "Question Text": "What is the capital of France?",
+          "Option A": "Paris",
+          "Option B": "London",
+          "Option C": "Berlin",
+          "Option D": "Madrid",
+          "Correct Option": "A",
+          Difficulty: "medium"
         },
         {
-          question: "The Earth is flat.",
-          type: "true_false",
-          subject: subjects.length > 0 ? subjects[0].title : "Enter a valid subject name",
-          difficulty: "easy",
-          options: "True;False",
-          correctAnswers: "False",
-          explanation: "The Earth is approximately spherical in shape."
+          Subject: subjects.length > 0 ? subjects[0].title : "Enter Subject Name",
+          "Question Type": "true_false",
+          "Question Text": "The Earth is flat.",
+          "Option A": "True",
+          "Option B": "False",
+          "Option C": "",
+          "Option D": "",
+          "Correct Option": "B",
+          Difficulty: "easy"
         },
         {
-          question: "Which of the following are mammals?",
-          type: "multiple_answer",
-          subject: subjects.length > 0 ? subjects[0].title : "Enter a valid subject name",
-          difficulty: "medium",
-          options: "Dog;Fish;Cat;Spider",
-          correctAnswers: "Dog;Cat",
-          explanation: "Dogs and cats are mammals, while fish and spiders are not."
+          Subject: subjects.length > 0 ? subjects[0].title : "Enter Subject Name",
+          "Question Type": "multiple_answer",
+          "Question Text": "Which of the following are mammals?",
+          "Option A": "Dog",
+          "Option B": "Fish",
+          "Option C": "Cat",
+          "Option D": "Spider",
+          "Correct Option": "A, C",
+          Difficulty: "medium"
         }
       ];
 
@@ -234,13 +255,15 @@ export const useImportQuestions = (subjects: Subject[]) => {
 
       // Set column widths
       const colWidths = [
-        { wch: 35 }, // question
-        { wch: 15 }, // type
-        { wch: 20 }, // subject
-        { wch: 10 }, // difficulty
-        { wch: 30 }, // options
-        { wch: 20 }, // correctAnswers
-        { wch: 40 }  // explanation
+        { wch: 20 },  // Subject
+        { wch: 15 },  // Question Type
+        { wch: 40 },  // Question Text
+        { wch: 20 },  // Option A
+        { wch: 20 },  // Option B
+        { wch: 20 },  // Option C
+        { wch: 20 },  // Option D
+        { wch: 15 },  // Correct Option
+        { wch: 12 }   // Difficulty
       ];
       
       ws['!cols'] = colWidths;
@@ -252,6 +275,19 @@ export const useImportQuestions = (subjects: Subject[]) => {
       console.error("Error downloading template:", error);
       toast.error("Failed to download template");
     }
+  };
+
+  const isOptionCorrect = (correctAnswers: string, optionIndex: number): boolean => {
+    if (!correctAnswers) return false;
+    
+    // Convert to uppercase letters or numbers
+    const correctOptions = correctAnswers.split(/[,;]/)
+      .map(opt => opt.trim().toUpperCase());
+    
+    // Check if the option matches any of the correct options
+    const optionLabels = ['A', 'B', 'C', 'D'];
+    return correctOptions.includes(optionLabels[optionIndex]) || 
+           correctOptions.includes(`${optionIndex + 1}`);
   };
 
   return {
