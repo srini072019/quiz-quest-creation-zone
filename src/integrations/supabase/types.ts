@@ -95,12 +95,14 @@ export type Database = {
           id: string
           instructor_id: string
           passing_score: number
+          question_pool: Json | null
           shuffle_questions: boolean
           start_date: string | null
           status: string
           time_limit: number
           title: string
           updated_at: string
+          use_question_pool: boolean | null
         }
         Insert: {
           course_id: string
@@ -110,12 +112,14 @@ export type Database = {
           id?: string
           instructor_id: string
           passing_score?: number
+          question_pool?: Json | null
           shuffle_questions?: boolean
           start_date?: string | null
           status?: string
           time_limit?: number
           title: string
           updated_at?: string
+          use_question_pool?: boolean | null
         }
         Update: {
           course_id?: string
@@ -125,12 +129,14 @@ export type Database = {
           id?: string
           instructor_id?: string
           passing_score?: number
+          question_pool?: Json | null
           shuffle_questions?: boolean
           start_date?: string | null
           status?: string
           time_limit?: number
           title?: string
           updated_at?: string
+          use_question_pool?: boolean | null
         }
         Relationships: [
           {

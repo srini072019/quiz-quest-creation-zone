@@ -42,9 +42,9 @@ export const useExams = (courseId?: string, instructorId?: string) => {
         updatedAt: new Date(exam.updated_at),
         startDate: exam.start_date ? new Date(exam.start_date) : undefined,
         endDate: exam.end_date ? new Date(exam.end_date) : undefined,
-        // Use optional chaining to safely access properties that might not exist
-        useQuestionPool: Boolean(exam.use_question_pool ?? false),
-        questionPool: exam.question_pool ? JSON.parse(exam.question_pool) : undefined,
+        // Now safely accessing the newly added properties with optional chaining and type handling
+        useQuestionPool: Boolean((exam as any).use_question_pool ?? false),
+        questionPool: (exam as any).question_pool ? (exam as any).question_pool : undefined,
       }));
       
       setExams(transformedExams);
