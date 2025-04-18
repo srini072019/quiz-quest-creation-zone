@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, CheckCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -5,10 +6,18 @@ import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthContext";
+import { useEffect } from "react";
 
 const Home = () => {
   const navigate = useNavigate();
   const { authState, logout } = useAuth();
+  
+  // Redirect to appropriate dashboard if user is already authenticated
+  useEffect(() => {
+    if (authState.isAuthenticated && authState.user && !authState.isLoading) {
+      goToDashboard();
+    }
+  }, [authState.isAuthenticated, authState.user, authState.isLoading]);
   
   const goToDashboard = () => {
     if (!authState.isAuthenticated || !authState.user) return;
@@ -25,6 +34,18 @@ const Home = () => {
         break;
     }
   };
+
+  // If auth is still loading, show loading indicator
+  if (authState.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">Loading...</h1>
+          <p className="text-xl text-gray-600">Please wait while we load your information.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
