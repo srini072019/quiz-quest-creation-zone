@@ -1,5 +1,5 @@
 
-import { createBrowserRouter } from "react-router-dom";
+import { RouteObject } from "react-router-dom";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 
@@ -31,7 +31,7 @@ import AdminDashboard from "@/pages/admin/Dashboard";
 // Public pages
 import CourseDetails from "@/pages/CourseDetails";
 
-const router = createBrowserRouter([
+const routes: RouteObject[] = [
   // Root
   {
     path: "/",
@@ -120,6 +120,6 @@ const router = createBrowserRouter([
     path: "/courses/:courseId",
     element: <CourseDetails />,
   },
-]);
+];
 
-export default router;
+export default { routes };
