@@ -2,6 +2,7 @@
 import { RouteObject } from "react-router-dom";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
+import Home from "@/pages/Home"; // Add import for Home
 
 // Auth pages
 import Login from "@/pages/auth/Login";
@@ -37,6 +38,12 @@ const routes: RouteObject[] = [
     path: "/",
     element: <Index />,
     errorElement: <NotFound />,
+  },
+  
+  // Home
+  {
+    path: "/home",
+    element: <Home />,
   },
   
   // Auth
