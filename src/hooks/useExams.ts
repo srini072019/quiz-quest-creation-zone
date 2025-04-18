@@ -74,7 +74,7 @@ export const useExams = (courseId?: string, instructorId?: string) => {
           start_date: data.startDate ? data.startDate.toISOString() : null,
           end_date: data.endDate ? data.endDate.toISOString() : null,
           use_question_pool: data.useQuestionPool,
-          question_pool: data.questionPool,
+          question_pool: data.questionPool ? JSON.stringify(data.questionPool) : null,
         })
         .select()
         .single();
@@ -125,6 +125,8 @@ export const useExams = (courseId?: string, instructorId?: string) => {
           start_date: data.startDate ? data.startDate.toISOString() : null,
           end_date: data.endDate ? data.endDate.toISOString() : null,
           updated_at: new Date().toISOString(),
+          use_question_pool: data.useQuestionPool,
+          question_pool: data.questionPool ? JSON.stringify(data.questionPool) : null,
         })
         .eq('id', id);
 
