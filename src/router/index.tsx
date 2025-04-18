@@ -1,112 +1,125 @@
 
-import { useRoutes } from "react-router-dom";
-import { ROUTES } from "@/constants/routes";
+import { createBrowserRouter } from "react-router-dom";
+import Index from "@/pages/Index";
+import NotFound from "@/pages/NotFound";
 
-// Public pages
-import Home from "@/pages/Home";
+// Auth pages
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
 
-// Admin pages
-import AdminDashboard from "@/pages/admin/Dashboard";
-
 // Instructor pages
 import InstructorDashboard from "@/pages/instructor/Dashboard";
-import InstructorCourses from "@/pages/instructor/Courses";
+import Courses from "@/pages/instructor/Courses";
 import CourseDetail from "@/pages/instructor/CourseDetail";
-import InstructorSubjects from "@/pages/instructor/Subjects";
+import Subjects from "@/pages/instructor/Subjects";
 import SubjectDetail from "@/pages/instructor/SubjectDetail";
-import InstructorQuestions from "@/pages/instructor/Questions";
-import InstructorExams from "@/pages/instructor/Exams";
+import Questions from "@/pages/instructor/Questions";
+import Exams from "@/pages/instructor/Exams";
+import CreateExam from "@/pages/instructor/CreateExam";
+import EditExam from "@/pages/instructor/EditExam";
 
 // Candidate pages
 import CandidateDashboard from "@/pages/candidate/Dashboard";
 import CandidateCourses from "@/pages/candidate/Courses";
+import CandidateExams from "@/pages/candidate/Exams";
 import ExamPage from "@/pages/candidate/ExamPage";
-import Exams from "@/pages/candidate/Exams";
 
-const AppRouter = () => {
-  const routes = useRoutes([
-    {
-      path: ROUTES.HOME,
-      element: <Home />,
-    },
-    {
-      path: ROUTES.LOGIN,
-      element: <Login />,
-    },
-    {
-      path: ROUTES.REGISTER,
-      element: <Register />,
-    },
-    {
-      path: ROUTES.FORGOT_PASSWORD,
-      element: <ForgotPassword />,
-    },
-    
-    // Admin routes
-    {
-      path: ROUTES.ADMIN_DASHBOARD,
-      element: <AdminDashboard />,
-    },
-    
-    // Instructor routes
-    {
-      path: ROUTES.INSTRUCTOR_DASHBOARD,
-      element: <InstructorDashboard />,
-    },
-    {
-      path: ROUTES.INSTRUCTOR_COURSES,
-      element: <InstructorCourses />,
-    },
-    {
-      path: `${ROUTES.INSTRUCTOR_COURSES}/:id`,
-      element: <CourseDetail />,
-    },
-    {
-      path: ROUTES.INSTRUCTOR_SUBJECTS,
-      element: <InstructorSubjects />,
-    },
-    {
-      path: `${ROUTES.INSTRUCTOR_SUBJECTS}/:id`,
-      element: <SubjectDetail />,
-    },
-    {
-      path: ROUTES.INSTRUCTOR_QUESTIONS,
-      element: <InstructorQuestions />,
-    },
-    {
-      path: ROUTES.INSTRUCTOR_EXAMS,
-      element: <InstructorExams />,
-    },
-    
-    // Candidate routes
-    {
-      path: ROUTES.CANDIDATE_DASHBOARD,
-      element: <CandidateDashboard />,
-    },
-    {
-      path: ROUTES.CANDIDATE_COURSES,
-      element: <CandidateCourses />,
-    },
-    {
-      path: ROUTES.CANDIDATE_EXAMS,
-      element: <Exams />,
-    },
-    {
-      path: `${ROUTES.CANDIDATE_EXAMS}/:id`,
-      element: <ExamPage />,
-    },
-    
-    // Default route - redirect to home or 404
-    {
-      path: "*",
-      element: <Home />, // Replace with NotFound component when created
-    },
-  ]);
+// Admin pages
+import AdminDashboard from "@/pages/admin/Dashboard";
 
-  return routes;
-};
+// Public pages
+import CourseDetails from "@/pages/CourseDetails";
 
-export default AppRouter;
+const router = createBrowserRouter([
+  // Root
+  {
+    path: "/",
+    element: <Index />,
+    errorElement: <NotFound />,
+  },
+  
+  // Auth
+  {
+    path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
+  },
+  {
+    path: "/forgot-password",
+    element: <ForgotPassword />,
+  },
+  
+  // Instructor
+  {
+    path: "/instructor/dashboard",
+    element: <InstructorDashboard />,
+  },
+  {
+    path: "/instructor/courses",
+    element: <Courses />,
+  },
+  {
+    path: "/instructor/courses/:courseId",
+    element: <CourseDetail />,
+  },
+  {
+    path: "/instructor/subjects",
+    element: <Subjects />,
+  },
+  {
+    path: "/instructor/subjects/:subjectId",
+    element: <SubjectDetail />,
+  },
+  {
+    path: "/instructor/questions",
+    element: <Questions />,
+  },
+  {
+    path: "/instructor/exams",
+    element: <Exams />,
+  },
+  {
+    path: "/instructor/exams/create",
+    element: <CreateExam />,
+  },
+  {
+    path: "/instructor/exams/:examId/edit",
+    element: <EditExam />,
+  },
+  
+  // Candidate
+  {
+    path: "/candidate/dashboard",
+    element: <CandidateDashboard />,
+  },
+  {
+    path: "/candidate/courses",
+    element: <CandidateCourses />,
+  },
+  {
+    path: "/candidate/exams",
+    element: <CandidateExams />,
+  },
+  {
+    path: "/candidate/exams/:examId",
+    element: <ExamPage />,
+  },
+  
+  // Admin
+  {
+    path: "/admin/dashboard",
+    element: <AdminDashboard />,
+  },
+  
+  // Public
+  {
+    path: "/courses/:courseId",
+    element: <CourseDetails />,
+  },
+]);
+
+export default router;

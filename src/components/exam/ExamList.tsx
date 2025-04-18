@@ -1,12 +1,11 @@
+
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Edit, Plus, Trash2, Clock, ExternalLink, FileText, Archive } from "lucide-react";
+import { Edit, Plus, Trash2, Clock, Archive, FileText } from "lucide-react";
 import { Exam, ExamStatus } from "@/types/exam.types";
-import ExamForm from "./ExamForm";
 import { useExams } from "@/hooks/useExams";
-import { useSubjects } from "@/hooks/useSubjects";
 import { Course } from "@/types/course.types";
 import { Badge } from "@/components/ui/badge";
 import { Question } from "@/types/question.types";
@@ -20,45 +19,17 @@ interface ExamListProps {
 }
 
 const ExamList = ({ courseId, courses, questions }: ExamListProps) => {
-  const { exams: allExams, createExam, updateExam, deleteExam, publishExam, archiveExam, isLoading } = useExams(courseId);
-  const { subjects } = useSubjects();
-  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const { exams: allExams, deleteExam, publishExam, archiveExam, isLoading } = useExams(courseId);
 
   const exams = allExams.filter(exam => exam.courseId === courseId);
   const draftExams = exams.filter(exam => exam.status === ExamStatus.DRAFT);
   const publishedExams = exams.filter(exam => exam.status === ExamStatus.PUBLISHED);
   const archivedExams = exams.filter(exam => exam.status === ExamStatus.ARCHIVED);
 
-  const handleCreateExam = async (data: any) => {
-    await createExam({
-      ...data,
-      courseId,
-    });
-    setIsCreateDialogOpen(false);
-  };
-
-  const handleUpdateExam = async (data: any) => {
-    if (selectedExam) {
-      await updateExam(selectedExam.id, {
-        ...data,
-        courseId: selectedExam.courseId,
-      });
-      setIsEditDialogOpen(false);
-      setSelectedExam(null);
-    }
-  };
-
   const handleDeleteExam = async (id: string) => {
     if (confirm("Are you sure you want to delete this exam?")) {
       await deleteExam(id);
     }
-  };
-
-  const handleEditClick = (exam: Exam) => {
-    setSelectedExam(exam);
-    setIsEditDialogOpen(true);
   };
 
   const handlePublishExam = async (id: string) => {
@@ -98,8 +69,10 @@ const ExamList = ({ courseId, courses, questions }: ExamListProps) => {
           <div className="flex space-x-2">
             {exam.status === ExamStatus.DRAFT && (
               <>
-                <Button variant="ghost" size="icon" onClick={() => handleEditClick(exam)}>
-                  <Edit size={16} />
+                <Button variant="ghost" size="icon" asChild>
+                  <Link to={`/instructor/exams/${exam.id}/edit`}>
+                    <Edit size={16} />
+                  </Link>
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => handlePublishExam(exam.id)}>
                   <FileText size={16} />
@@ -152,36 +125,12 @@ const ExamList = ({ courseId, courses, questions }: ExamListProps) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Exams</h2>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="flex items-center gap-1">
-              <Plus size={16} />
-              <span>Create Exam</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <DialogHeader>
-              <DialogTitle>Create New Exam</DialogTitle>
-              <DialogDescription>
-                Create a new exam for your course.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex-1 overflow-hidden">
-              <ExamForm 
-                courses={courses}
-                questions={questions}
-                subjects={subjects}
-                onSubmit={handleCreateExam}
-                isSubmitting={isLoading}
-                courseIdFixed={true}
-                initialData={{ 
-                  courseId,
-                  status: ExamStatus.DRAFT 
-                }}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button size="sm" className="flex items-center gap-1" asChild>
+          <Link to="/instructor/exams/create">
+            <Plus size={16} />
+            <span>Create Exam</span>
+          </Link>
+        </Button>
       </div>
 
       <Tabs defaultValue="drafts" className="w-full">
@@ -227,43 +176,6 @@ const ExamList = ({ courseId, courses, questions }: ExamListProps) => {
           )}
         </TabsContent>
       </Tabs>
-
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Edit Exam</DialogTitle>
-            <DialogDescription>
-              Update the details of this exam.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            {selectedExam && (
-              <ExamForm 
-                initialData={{
-                  title: selectedExam.title,
-                  description: selectedExam.description,
-                  courseId: selectedExam.courseId,
-                  timeLimit: selectedExam.timeLimit,
-                  passingScore: selectedExam.passingScore,
-                  shuffleQuestions: selectedExam.shuffleQuestions,
-                  status: selectedExam.status,
-                  questions: selectedExam.questions,
-                  startDate: selectedExam.startDate,
-                  endDate: selectedExam.endDate,
-                  useQuestionPool: selectedExam.useQuestionPool,
-                  questionPool: selectedExam.questionPool,
-                }}
-                courses={courses}
-                questions={questions}
-                subjects={subjects}
-                onSubmit={handleUpdateExam}
-                isSubmitting={isLoading}
-                courseIdFixed={true}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

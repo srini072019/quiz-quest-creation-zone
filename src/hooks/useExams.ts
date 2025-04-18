@@ -42,6 +42,8 @@ export const useExams = (courseId?: string, instructorId?: string) => {
         updatedAt: new Date(exam.updated_at),
         startDate: exam.start_date ? new Date(exam.start_date) : undefined,
         endDate: exam.end_date ? new Date(exam.end_date) : undefined,
+        useQuestionPool: exam.use_question_pool || false,
+        questionPool: exam.question_pool || undefined,
       }));
       
       setExams(transformedExams);
@@ -70,6 +72,8 @@ export const useExams = (courseId?: string, instructorId?: string) => {
           status: data.status,
           start_date: data.startDate ? data.startDate.toISOString() : null,
           end_date: data.endDate ? data.endDate.toISOString() : null,
+          use_question_pool: data.useQuestionPool,
+          question_pool: data.questionPool,
         })
         .select()
         .single();
@@ -253,7 +257,8 @@ export const useExams = (courseId?: string, instructorId?: string) => {
     deleteExam,
     publishExam,
     archiveExam,
-    getExam,
-    getExamsByCourse,
+    fetchExams,
+    getExam: (id: string) => exams.find(exam => exam.id === id),
+    getExamsByCourse: (courseId: string) => exams.filter(exam => exam.courseId === courseId),
   };
 };

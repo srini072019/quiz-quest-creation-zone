@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import InstructorLayout from "@/layouts/InstructorLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,6 +25,12 @@ const ExamsPage = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Exams</h1>
+          <Button className="flex items-center gap-2" asChild>
+            <Link to="/instructor/exams/create">
+              <Plus size={18} />
+              <span>Create Exam</span>
+            </Link>
+          </Button>
         </div>
 
         {courses.length > 0 ? (
@@ -57,7 +63,7 @@ const ExamsPage = () => {
               No courses found. Create a course first to manage exams.
             </p>
             <Button asChild>
-              <a href="/instructor/courses">Create Course</a>
+              <Link to="/instructor/courses">Create Course</Link>
             </Button>
           </div>
         )}
