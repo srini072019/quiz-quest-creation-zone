@@ -37,7 +37,7 @@ export const fetchExamsFromApi = async (courseId?: string, instructorId?: string
       startDate: exam.start_date ? new Date(exam.start_date) : undefined,
       endDate: exam.end_date ? new Date(exam.end_date) : undefined,
       useQuestionPool: Boolean(exam.use_question_pool ?? false),
-      questionPool: exam.question_pool ? JSON.parse(exam.question_pool) : undefined,
+      questionPool: exam.question_pool ? JSON.parse(String(exam.question_pool)) : undefined,
     }));
   } catch (error) {
     console.error("Error fetching exams:", error);
