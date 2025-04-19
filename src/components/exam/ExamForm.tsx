@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,6 +15,7 @@ import ExamHeaderFields from "./form/ExamHeaderFields";
 import ExamSettingsFields from "./form/ExamSettingsFields";
 import ExamDateFields from "./form/ExamDateFields";
 import ExamQuestionSelection from "./form/ExamQuestionSelection";
+import { ExamCandidatesManager } from './candidates/ExamCandidatesManager';
 
 const examSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -194,11 +194,21 @@ const ExamForm = ({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 max-h-[80vh] overflow-y-auto px-4">
         <div className="space-y-6">
-          <ExamHeaderFields 
-            form={form} 
-            courses={courses} 
-            courseIdFixed={courseIdFixed} 
-          />
+          <div className="flex items-center justify-between">
+            <div className="space-y-6">
+              <ExamHeaderFields 
+                form={form} 
+                courses={courses} 
+                courseIdFixed={courseIdFixed} 
+              />
+            </div>
+            {selectedCourseId && (
+              <ExamCandidatesManager 
+                examId={initialData?.id || ''} 
+                courseId={selectedCourseId} 
+              />
+            )}
+          </div>
 
           <FormField
             control={form.control}
