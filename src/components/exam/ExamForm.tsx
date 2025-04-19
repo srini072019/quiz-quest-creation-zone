@@ -2,40 +2,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { ExamStatus } from "@/types/exam.types";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { Form } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Course } from "@/types/course.types";
 import { Question } from "@/types/question.types";
 import { Subject } from "@/types/subject.types";
-import QuestionPoolConfig from "./QuestionPoolConfig";
 import { QuestionPool } from "@/types/question-pool.types";
-import QuestionSelectionSection from "./QuestionSelectionSection";
 import { ExamFormData } from "@/types/exam.types";
 import ExamHeaderFields from "./form/ExamHeaderFields";
 import ExamSettingsFields from "./form/ExamSettingsFields";
 import ExamDateFields from "./form/ExamDateFields";
-import ExamPreview from "./ExamPreview";
+import ExamQuestionSelection from "./form/ExamQuestionSelection";
 
 const examSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -247,39 +225,17 @@ const ExamForm = ({
           <ExamDateFields form={form} />
         </div>
 
-        {!useQuestionPool && (
-          <>
-            <QuestionSelectionSection
-              form={form}
-              questionsBySubject={questionsBySubject}
-              selectedCourseId={selectedCourseId}
-            />
-            {watchQuestions.length > 0 && (
-              <ExamPreview 
-                questions={filteredQuestions.filter(q => watchQuestions.includes(q.id))} 
-              />
-            )}
-          </>
-        )}
-
-        {useQuestionPool && (
-          <>
-            <div className="border rounded-md p-4 space-y-4">
-              <h3 className="text-lg font-medium">Question Pool Configuration</h3>
-              <QuestionPoolConfig 
-                subjects={subjects.filter(s => s.courseId === selectedCourseId)}
-                initialPool={questionPool}
-                onPoolChange={setQuestionPool}
-                availableQuestionCount={filteredQuestions.length}
-              />
-            </div>
-            {questionPool && questionPool.subjects.length > 0 && (
-              <ExamPreview 
-                questions={filteredQuestions.slice(0, questionPool.subjects.reduce((sum, s) => sum + s.count, 0))} 
-              />
-            )}
-          </>
-        )}
+        <ExamQuestionSelection
+          form={form}
+          questionsBySubject={questionsBySubject}
+          selectedCourseId={selectedCourseId}
+          filteredQuestions={filteredQuestions}
+          useQuestionPool={useQuestionPool}
+          questionPool={questionPool}
+          setQuestionPool={setQuestionPool}
+          watchQuestions={watchQuestions}
+          subjects={subjects}
+        />
 
         <div className="flex justify-end sticky bottom-0 bg-white py-4 border-t mt-6">
           <Button type="submit" disabled={isSubmitting}>
