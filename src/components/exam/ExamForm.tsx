@@ -176,15 +176,15 @@ const ExamForm = ({
       }
 
       // Validate question pool configuration
-      const totalQuestions = Object.values(questionPool.subjectDistribution)
-        .reduce((sum, count) => sum + count, 0);
+      const totalQuestionsFromSubjects = questionPool.subjects.reduce((sum, subject) => 
+        sum + subject.count, 0);
 
-      if (totalQuestions <= 0) {
+      if (totalQuestionsFromSubjects <= 0) {
         toast.error("Question pool must include at least one question");
         return;
       }
 
-      if (totalQuestions > filteredQuestions.length) {
+      if (totalQuestionsFromSubjects > filteredQuestions.length) {
         toast.error(`Cannot select more questions than available (${filteredQuestions.length} available)`);
         return;
       }
