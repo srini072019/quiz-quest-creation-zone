@@ -19,12 +19,14 @@ interface QuestionPoolConfigProps {
   subjects: Subject[];
   initialPool?: QuestionPool;
   onPoolChange: (pool: QuestionPool) => void;
+  availableQuestionCount: number; // Added this prop
 }
 
 const QuestionPoolConfig = ({ 
   subjects, 
   initialPool, 
-  onPoolChange 
+  onPoolChange,
+  availableQuestionCount  // Use the new prop
 }: QuestionPoolConfigProps) => {
   const [pool, setPool] = useState<QuestionPool>(
     initialPool || {
@@ -137,6 +139,11 @@ const QuestionPoolConfig = ({
           />
           <p className="text-sm text-muted-foreground mt-1">
             Number of questions to randomly select from the pool
+          </p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground mt-6">
+            Available questions in course: <span className="font-medium">{availableQuestionCount}</span>
           </p>
         </div>
       </div>
