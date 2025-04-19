@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,6 +47,7 @@ const examSchema = z.object({
 
 interface ExamFormProps {
   initialData?: {
+    id?: string; // Added id property to fix the error
     title?: string;
     description?: string;
     courseId?: string;

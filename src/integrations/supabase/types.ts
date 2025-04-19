@@ -50,6 +50,48 @@ export type Database = {
           },
         ]
       }
+      exam_candidate_assignments: {
+        Row: {
+          assigned_at: string | null
+          candidate_id: string | null
+          created_at: string | null
+          exam_id: string | null
+          id: string
+          status: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          candidate_id?: string | null
+          created_at?: string | null
+          exam_id?: string | null
+          id?: string
+          status?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          candidate_id?: string | null
+          created_at?: string | null
+          exam_id?: string | null
+          id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_candidate_assignments_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "eligible_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_candidate_assignments_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_questions: {
         Row: {
           created_at: string
@@ -170,7 +212,15 @@ export type Database = {
           id?: string
           role?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "eligible_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       question_options: {
         Row: {
@@ -295,7 +345,14 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      eligible_candidates: {
+        Row: {
+          display_name: string | null
+          email: string | null
+          id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
