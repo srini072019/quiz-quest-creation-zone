@@ -97,6 +97,10 @@ const routes: RouteObject[] = [
     path: "/instructor/exams/:examId/edit",
     element: <EditExam />,
   },
+  {
+    path: "/instructor/exams/:examId/preview",
+    element: <ExamPage isPreview={true} />,
+  },
   
   // Candidate
   {

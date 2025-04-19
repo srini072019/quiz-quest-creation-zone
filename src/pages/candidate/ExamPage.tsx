@@ -10,14 +10,18 @@ import ExamResults from "@/components/exam/ExamResults";
 import CandidateLayout from "@/layouts/CandidateLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ExamResult, ExamSession } from "@/types/exam-session.types";
+import { ExamResult, ExamSession, ExamSessionStatus } from "@/types/exam-session.types";
 import { Question } from "@/types/question.types";
 import { Exam } from "@/types/exam.types";
 import { Loader2, Clock, FileText } from "lucide-react";
 import { format } from "date-fns";
 
-const ExamPage = () => {
-  const { id } = useParams<{ id: string }>();
+interface ExamPageProps {
+  isPreview?: boolean;
+}
+
+const ExamPage = ({ isPreview = false }: ExamPageProps) => {
+  const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
   const { authState } = useAuth();
   const { getExamWithQuestions } = useExams();
@@ -38,10 +42,10 @@ const ExamPage = () => {
 
   useEffect(() => {
     const loadExam = async () => {
-      if (!id) return;
+      if (!examId) return;
       
       try {
-        const { exam: examData, examQuestions: examQuestionsList } = getExamWithQuestions(id, questions);
+        const { exam: examData, examQuestions: examQuestionsList } = getExamWithQuestions(examId, questions);
         
         if (!examData) {
           toast.error("Exam not found");
@@ -60,10 +64,42 @@ const ExamPage = () => {
     };
 
     loadExam();
-  }, [id, getExamWithQuestions, questions, navigate]);
+  }, [examId, getExamWithQuestions, questions, navigate]);
+
+  // Check authentication if not in preview mode
+  useEffect(() => {
+    if (!isPreview && !authState.isLoading && !authState.isAuthenticated) {
+      toast.error("You must be logged in to access this page");
+      navigate("/login", { state: { from: `/candidate/exams/${examId}` } });
+    }
+  }, [authState.isAuthenticated, authState.isLoading, isPreview, examId, navigate]);
 
   const handleStartExam = async () => {
-    if (!exam || !authState.user) return;
+    if (!exam) return;
+
+    // For preview mode, we don't need to check auth
+    if (isPreview) {
+      // For preview mode, create a mock session without saving to database
+      const mockSession: ExamSession = {
+        id: 'preview',
+        examId: exam.id,
+        candidateId: 'preview',
+        startedAt: new Date(),
+        answers: [],
+        currentQuestionIndex: 0,
+        expiresAt: new Date(Date.now() + exam.timeLimit * 60 * 1000),
+        status: ExamSessionStatus.IN_PROGRESS,
+      };
+      setExamSession(mockSession);
+      return;
+    }
+
+    // For regular mode, check auth
+    if (!authState.user) {
+      toast.error("You must be logged in to take an exam");
+      navigate("/login", { state: { from: `/candidate/exams/${examId}` } });
+      return;
+    }
 
     try {
       const session = await startExam(
@@ -84,11 +120,35 @@ const ExamPage = () => {
   const handleSaveAnswer = async (questionId: string, selectedOptions: string[]) => {
     if (!examSession) return false;
     
+    if (isPreview) {
+      // For preview mode, just update the local state
+      setExamSession(prev => {
+        if (!prev) return prev;
+        const answers = [...prev.answers];
+        const existingIndex = answers.findIndex(a => a.questionId === questionId);
+        
+        if (existingIndex >= 0) {
+          answers[existingIndex] = { questionId, selectedOptions };
+        } else {
+          answers.push({ questionId, selectedOptions });
+        }
+        
+        return { ...prev, answers };
+      });
+      return true;
+    }
+    
     return await saveAnswer(examSession.id, questionId, selectedOptions);
   };
 
   const handleNavigate = async (newIndex: number) => {
     if (!examSession) return false;
+    
+    if (isPreview) {
+      // For preview mode, just update the local state
+      setExamSession(prev => prev ? { ...prev, currentQuestionIndex: newIndex } : null);
+      return true;
+    }
     
     const success = await navigateQuestion(examSession.id, newIndex);
     if (success) {
@@ -101,8 +161,15 @@ const ExamPage = () => {
     return success;
   };
 
-  const handleSubmitExam = async () => {
+  const handleSubmit = async () => {
     if (!examSession || !exam) return;
+    
+    if (isPreview) {
+      // For preview mode, just show a message and return to the exam list
+      toast.success("Preview completed");
+      navigate("/instructor/exams");
+      return;
+    }
     
     try {
       const result = await submitExam(examSession.id, exam, examQuestions);
@@ -190,7 +257,9 @@ const ExamPage = () => {
               </ul>
             </div>
             <div className="mt-6 flex justify-end">
-              <Button onClick={handleStartExam}>Start Exam</Button>
+              <Button onClick={handleStartExam}>
+                {isPreview ? "Start Preview" : "Start Exam"}
+              </Button>
             </div>
           </div>
         </div>
@@ -205,7 +274,8 @@ const ExamPage = () => {
         questions={examQuestions}
         onSaveAnswer={handleSaveAnswer}
         onNavigate={handleNavigate}
-        onSubmit={handleSubmitExam}
+        onSubmit={handleSubmit}
+        isPreview={isPreview}
       />
     </CandidateLayout>
   );
