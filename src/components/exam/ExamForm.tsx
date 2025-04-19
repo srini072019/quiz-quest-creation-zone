@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,17 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { Course } from "@/types/course.types";
 import { Question } from "@/types/question.types";
 import { Subject } from "@/types/subject.types";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import QuestionPoolConfig from "./QuestionPoolConfig";
 import { QuestionPool } from "@/types/question-pool.types";
 import QuestionSelectionSection from "./QuestionSelectionSection";
@@ -43,7 +37,6 @@ import ExamHeaderFields from "./form/ExamHeaderFields";
 import ExamSettingsFields from "./form/ExamSettingsFields";
 import ExamDateFields from "./form/ExamDateFields";
 
-// Modify the examSchema to match the ExamFormData interface
 const examSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(5, "Description must be at least 5 characters"),
@@ -53,9 +46,17 @@ const examSchema = z.object({
   shuffleQuestions: z.boolean(),
   useQuestionPool: z.boolean().default(false),
   status: z.nativeEnum(ExamStatus),
-  questions: z.array(z.string()).min(1, "At least one question is required"),
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
+  questions: z.array(z.string()),
+  startDate: z.date(),
+  endDate: z.date(),
+}).refine((data) => {
+  if (data.endDate <= data.startDate) {
+    return false;
+  }
+  return true;
+}, {
+  message: "End date must be after start date",
+  path: ["endDate"],
 });
 
 interface ExamFormProps {
@@ -97,7 +98,10 @@ const ExamForm = ({
     initialData?.questionPool
   );
 
-  // Explicitly type the form with ExamFormData to ensure type compatibility
+  // Set default dates if not provided
+  const defaultStartDate = initialData?.startDate || new Date();
+  const defaultEndDate = initialData?.endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
   const form = useForm<ExamFormData>({
     resolver: zodResolver(examSchema),
     defaultValues: {
@@ -110,12 +114,13 @@ const ExamForm = ({
       useQuestionPool: initialData?.useQuestionPool || false,
       status: initialData?.status || ExamStatus.DRAFT,
       questions: initialData?.questions || [],
-      startDate: initialData?.startDate,
-      endDate: initialData?.endDate,
+      startDate: defaultStartDate,
+      endDate: defaultEndDate,
     },
   });
 
   const watchCourseId = form.watch("courseId");
+  const watchQuestions = form.watch("questions");
 
   useEffect(() => {
     if (watchCourseId) {
@@ -146,10 +151,47 @@ const ExamForm = ({
   }, {} as Record<string, { subject: typeof subjects[0], questions: Question[] }>);
 
   const handleSubmit = (data: ExamFormData) => {
-    if (useQuestionPool && questionPool) {
+    // Validate question count
+    if (!useQuestionPool && data.questions.length === 0) {
+      toast.error("Please select at least one question");
+      return;
+    }
+
+    // Validate start and end dates
+    const now = new Date();
+    if (data.startDate < now) {
+      toast.error("Start date cannot be in the past");
+      return;
+    }
+
+    if (data.endDate <= data.startDate) {
+      toast.error("End date must be after start date");
+      return;
+    }
+
+    if (useQuestionPool) {
+      if (!questionPool) {
+        toast.error("Please configure the question pool");
+        return;
+      }
+
+      // Validate question pool configuration
+      const totalQuestions = Object.values(questionPool.subjectDistribution)
+        .reduce((sum, count) => sum + count, 0);
+
+      if (totalQuestions <= 0) {
+        toast.error("Question pool must include at least one question");
+        return;
+      }
+
+      if (totalQuestions > filteredQuestions.length) {
+        toast.error(`Cannot select more questions than available (${filteredQuestions.length} available)`);
+        return;
+      }
+
       onSubmit({
         ...data,
-        useQuestionPool,
+        useQuestionPool: true,
         questionPool
       });
     } else {
