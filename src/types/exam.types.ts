@@ -1,4 +1,3 @@
-
 import { QuestionPool } from "./question-pool.types";
 import { Question } from "./question.types";
 
@@ -23,6 +22,8 @@ export interface Exam {
   updatedAt: Date;
   startDate?: Date;
   endDate?: Date;
+  startTime?: string;
+  endTime?: string;
   useQuestionPool?: boolean;
   questionPool?: QuestionPool;
 }
@@ -38,6 +39,8 @@ export interface ExamFormData {
   questions: string[];
   startDate?: Date;
   endDate?: Date;
+  startTime: string;
+  endTime: string;
   useQuestionPool: boolean; // Changed from optional to required
   questionPool?: QuestionPool;
 }

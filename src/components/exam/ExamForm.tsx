@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -36,6 +35,7 @@ import { ExamFormData } from "@/types/exam.types";
 import ExamHeaderFields from "./form/ExamHeaderFields";
 import ExamSettingsFields from "./form/ExamSettingsFields";
 import ExamDateFields from "./form/ExamDateFields";
+import ExamPreview from "./ExamPreview";
 
 const examSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -49,14 +49,19 @@ const examSchema = z.object({
   questions: z.array(z.string()),
   startDate: z.date(),
   endDate: z.date(),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
 }).refine((data) => {
-  if (data.endDate <= data.startDate) {
-    return false;
-  }
-  return true;
+  const startDateTime = new Date(
+    `${data.startDate.toISOString().split('T')[0]}T${data.startTime}`
+  );
+  const endDateTime = new Date(
+    `${data.endDate.toISOString().split('T')[0]}T${data.endTime}`
+  );
+  return endDateTime > startDateTime;
 }, {
-  message: "End date must be after start date",
-  path: ["endDate"],
+  message: "End date/time must be after start date/time",
+  path: ["endTime"],
 });
 
 interface ExamFormProps {
@@ -73,6 +78,8 @@ interface ExamFormProps {
     questions?: string[];
     startDate?: Date;
     endDate?: Date;
+    startTime?: string;
+    endTime?: string;
   };
   courses: Course[];
   questions: Question[];
@@ -98,9 +105,10 @@ const ExamForm = ({
     initialData?.questionPool
   );
 
-  // Set default dates if not provided
   const defaultStartDate = initialData?.startDate || new Date();
   const defaultEndDate = initialData?.endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+  const defaultStartTime = "09:00";
+  const defaultEndTime = "17:00";
 
   const form = useForm<ExamFormData>({
     resolver: zodResolver(examSchema),
@@ -116,6 +124,8 @@ const ExamForm = ({
       questions: initialData?.questions || [],
       startDate: defaultStartDate,
       endDate: defaultEndDate,
+      startTime: initialData?.startTime || defaultStartTime,
+      endTime: initialData?.endTime || defaultEndTime,
     },
   });
 
@@ -151,21 +161,20 @@ const ExamForm = ({
   }, {} as Record<string, { subject: typeof subjects[0], questions: Question[] }>);
 
   const handleSubmit = (data: ExamFormData) => {
-    // Validate question count
     if (!useQuestionPool && data.questions.length === 0) {
       toast.error("Please select at least one question");
       return;
     }
 
-    // Validate start and end dates
-    const now = new Date();
-    if (data.startDate < now) {
-      toast.error("Start date cannot be in the past");
-      return;
-    }
+    const startDateTime = new Date(
+      `${data.startDate.toISOString().split('T')[0]}T${data.startTime}`
+    );
+    const endDateTime = new Date(
+      `${data.endDate.toISOString().split('T')[0]}T${data.endTime}`
+    );
 
-    if (data.endDate <= data.startDate) {
-      toast.error("End date must be after start date");
+    if (endDateTime <= startDateTime) {
+      toast.error("End date/time must be after start date/time");
       return;
     }
 
@@ -175,7 +184,6 @@ const ExamForm = ({
         return;
       }
 
-      // Validate question pool configuration
       const totalQuestionsFromSubjects = questionPool.subjects.reduce((sum, subject) => 
         sum + subject.count, 0);
 
@@ -240,22 +248,37 @@ const ExamForm = ({
         </div>
 
         {!useQuestionPool && (
-          <QuestionSelectionSection
-            form={form}
-            questionsBySubject={questionsBySubject}
-            selectedCourseId={selectedCourseId}
-          />
+          <>
+            <QuestionSelectionSection
+              form={form}
+              questionsBySubject={questionsBySubject}
+              selectedCourseId={selectedCourseId}
+            />
+            {watchQuestions.length > 0 && (
+              <ExamPreview 
+                questions={filteredQuestions.filter(q => watchQuestions.includes(q.id))} 
+              />
+            )}
+          </>
         )}
 
         {useQuestionPool && (
-          <div className="border rounded-md p-4 space-y-4">
-            <h3 className="text-lg font-medium">Question Pool Configuration</h3>
-            <QuestionPoolConfig 
-              subjects={subjects} 
-              initialPool={questionPool}
-              onPoolChange={setQuestionPool} 
-            />
-          </div>
+          <>
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-lg font-medium">Question Pool Configuration</h3>
+              <QuestionPoolConfig 
+                subjects={subjects.filter(s => s.courseId === selectedCourseId)}
+                initialPool={questionPool}
+                onPoolChange={setQuestionPool}
+                availableQuestionCount={filteredQuestions.length}
+              />
+            </div>
+            {questionPool && questionPool.subjects.length > 0 && (
+              <ExamPreview 
+                questions={filteredQuestions.slice(0, questionPool.subjects.reduce((sum, s) => sum + s.count, 0))} 
+              />
+            )}
+          </>
         )}
 
         <div className="flex justify-end sticky bottom-0 bg-white py-4 border-t mt-6">
