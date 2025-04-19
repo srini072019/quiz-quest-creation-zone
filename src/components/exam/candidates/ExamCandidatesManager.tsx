@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ExamCandidate } from '@/types/exam-candidate.types';
+import { useExamCandidates } from '@/hooks/useExamCandidates';
 import { toast } from 'sonner';
 
 interface ExamCandidatesManagerProps {
@@ -27,27 +27,23 @@ interface ExamCandidatesManagerProps {
 
 export const ExamCandidatesManager = ({ examId, courseId }: ExamCandidatesManagerProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
+  const { 
+    candidates, 
+    assignedCandidates, 
+    assignCandidate, 
+    unassignCandidate 
+  } = useExamCandidates(examId);
 
-  const handleToggleCandidate = (candidateId: string) => {
-    setSelectedCandidates(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(candidateId)) {
-        newSet.delete(candidateId);
-      } else {
-        newSet.add(candidateId);
-      }
-      return newSet;
-    });
-  };
+  const handleToggleCandidate = async (candidateId: string) => {
+    if (!examId) {
+      toast.error("Please save the exam first");
+      return;
+    }
 
-  const handleSaveAssignments = async () => {
-    try {
-      // TODO: Integrate with Supabase to save assignments
-      toast.success("Candidates assigned successfully");
-      setIsOpen(false);
-    } catch (error) {
-      toast.error("Failed to assign candidates");
+    if (assignedCandidates.includes(candidateId)) {
+      await unassignCandidate(candidateId);
+    } else {
+      await assignCandidate(candidateId);
     }
   };
 
@@ -70,32 +66,37 @@ export const ExamCandidatesManager = ({ examId, courseId }: ExamCandidatesManage
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* TODO: Replace with actual candidates data */}
-              <TableRow>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleToggleCandidate("1")}
-                  >
-                    {selectedCandidates.has("1") ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <X className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TableCell>
-                <TableCell>John Doe</TableCell>
-                <TableCell>john@example.com</TableCell>
-              </TableRow>
+              {candidates.map((candidate) => (
+                <TableRow key={candidate.id}>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleToggleCandidate(candidate.id)}
+                    >
+                      {assignedCandidates.includes(candidate.id) ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableCell>
+                  <TableCell>{candidate.displayName || 'No name'}</TableCell>
+                  <TableCell>{candidate.email}</TableCell>
+                </TableRow>
+              ))}
+              {candidates.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-4">
+                    No eligible candidates found
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveAssignments}>
-              Save Assignments
+              Close
             </Button>
           </div>
         </div>
