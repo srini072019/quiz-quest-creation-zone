@@ -18,6 +18,7 @@ interface ExamQuestionSelectionProps {
   setQuestionPool: (pool: QuestionPool) => void;
   watchQuestions: string[];
   subjects: Subject[];
+  showPreview?: boolean;
 }
 
 const ExamQuestionSelection = ({
@@ -29,7 +30,8 @@ const ExamQuestionSelection = ({
   questionPool,
   setQuestionPool,
   watchQuestions,
-  subjects
+  subjects,
+  showPreview = false
 }: ExamQuestionSelectionProps) => {
   if (!useQuestionPool) {
     return (
@@ -39,7 +41,7 @@ const ExamQuestionSelection = ({
           questionsBySubject={questionsBySubject}
           selectedCourseId={selectedCourseId}
         />
-        {watchQuestions.length > 0 && (
+        {showPreview && watchQuestions.length > 0 && (
           <ExamPreview 
             questions={filteredQuestions.filter(q => watchQuestions.includes(q.id))} 
           />
@@ -59,7 +61,7 @@ const ExamQuestionSelection = ({
           availableQuestionCount={filteredQuestions.length}
         />
       </div>
-      {questionPool && questionPool.subjects.length > 0 && (
+      {showPreview && questionPool && questionPool.subjects.length > 0 && (
         <ExamPreview 
           questions={filteredQuestions.slice(0, questionPool.subjects.reduce((sum, s) => sum + s.count, 0))} 
         />

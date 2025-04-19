@@ -1,7 +1,7 @@
 
 import { format } from "date-fns";
 import { CalendarIcon, Clock } from "lucide-react";
-import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,10 @@ interface ExamDateFieldsProps {
 }
 
 const ExamDateFields = ({ form }: ExamDateFieldsProps) => {
+  const handleTimeChange = (field: "startTime" | "endTime", value: string) => {
+    form.setValue(field, value, { shouldValidate: true });
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -69,7 +73,11 @@ const ExamDateFields = ({ form }: ExamDateFieldsProps) => {
                 <FormControl>
                   <div className="flex items-center">
                     <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                    <Input type="time" {...field} />
+                    <Input 
+                      type="time" 
+                      value={field.value}
+                      onChange={(e) => handleTimeChange("startTime", e.target.value)}
+                    />
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -130,7 +138,11 @@ const ExamDateFields = ({ form }: ExamDateFieldsProps) => {
                 <FormControl>
                   <div className="flex items-center">
                     <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                    <Input type="time" {...field} />
+                    <Input 
+                      type="time" 
+                      value={field.value}
+                      onChange={(e) => handleTimeChange("endTime", e.target.value)}
+                    />
                   </div>
                 </FormControl>
                 <FormMessage />

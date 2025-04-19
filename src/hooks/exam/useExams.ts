@@ -9,6 +9,7 @@ import {
   updateExamStatusInApi 
 } from "./api";
 import { ExamHookResult } from "./types";
+import { Question } from "@/types/question.types";
 
 export const useExams = (courseId?: string, instructorId?: string): ExamHookResult => {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -90,6 +91,23 @@ export const useExams = (courseId?: string, instructorId?: string): ExamHookResu
     }
   };
 
+  const getExamWithQuestions = (id: string, allQuestions: Question[]) => {
+    const exam = exams.find(exam => exam.id === id);
+    let examQuestions: Question[] = [];
+    
+    if (exam) {
+      examQuestions = allQuestions.filter(q => exam.questions.includes(q.id));
+      
+      // If shuffle is enabled, we're just showing a preview (not the actual shuffle)
+      if (exam.shuffleQuestions) {
+        // Just for display, not actual exam taking
+        examQuestions = [...examQuestions].sort(() => 0.5 - Math.random());
+      }
+    }
+    
+    return { exam, examQuestions };
+  };
+
   useEffect(() => {
     fetchExams();
   }, [courseId, instructorId]);
@@ -105,5 +123,6 @@ export const useExams = (courseId?: string, instructorId?: string): ExamHookResu
     fetchExams,
     getExam: (id: string) => exams.find(exam => exam.id === id),
     getExamsByCourse: (courseId: string) => exams.filter(exam => exam.courseId === courseId),
+    getExamWithQuestions,
   };
 };

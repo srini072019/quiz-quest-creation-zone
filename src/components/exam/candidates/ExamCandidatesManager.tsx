@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -69,17 +70,10 @@ export const ExamCandidatesManager = ({ examId, courseId }: ExamCandidatesManage
               {candidates.map((candidate) => (
                 <TableRow key={candidate.id}>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleToggleCandidate(candidate.id)}
-                    >
-                      {assignedCandidates.includes(candidate.id) ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <Checkbox
+                      checked={assignedCandidates.includes(candidate.id)}
+                      onCheckedChange={() => handleToggleCandidate(candidate.id)}
+                    />
                   </TableCell>
                   <TableCell>{candidate.displayName || 'No name'}</TableCell>
                   <TableCell>{candidate.email}</TableCell>

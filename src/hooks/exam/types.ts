@@ -1,5 +1,6 @@
 
 import { Exam, ExamFormData } from "@/types/exam.types";
+import { Question } from "@/types/question.types";
 
 export interface ExamHookResult {
   exams: Exam[];
@@ -12,4 +13,5 @@ export interface ExamHookResult {
   fetchExams: () => Promise<void>;
   getExam: (id: string) => Exam | undefined;
   getExamsByCourse: (courseId: string) => Exam[];
+  getExamWithQuestions: (id: string, questions: Question[]) => { exam: Exam | undefined; examQuestions: Question[] };
 }

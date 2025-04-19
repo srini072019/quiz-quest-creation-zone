@@ -64,6 +64,7 @@ const CreateExamPage = () => {
               initialData={{ 
                 status: ExamStatus.DRAFT 
               }}
+              isEdit={false}
             />
           </CardContent>
         </Card>

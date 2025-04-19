@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Plus, Trash2, Clock, Archive, FileText } from "lucide-react";
+import { Edit, Plus, Trash2, Clock, Archive, FileText, Calendar } from "lucide-react";
 import { Exam, ExamStatus } from "@/types/exam.types";
 import { useExams } from "@/hooks/useExams";
 import { Course } from "@/types/course.types";
@@ -55,71 +54,76 @@ const ExamList = ({ courseId, courses, questions }: ExamListProps) => {
     }
   };
 
-  const renderExamCard = (exam: Exam) => (
-    <Card key={exam.id}>
-      <CardHeader className="p-4 pb-2">
-        <div className="flex justify-between items-start">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-lg">{exam.title}</CardTitle>
-              {getStatusBadge(exam.status)}
+  const renderExamCard = (exam: Exam) => {
+    const examQuestionCount = exam.useQuestionPool && exam.questionPool
+      ? exam.questionPool.totalQuestions
+      : exam.questions.length;
+      
+    return (
+      <Card key={exam.id}>
+        <CardHeader className="p-4 pb-2">
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg">{exam.title}</CardTitle>
+                {getStatusBadge(exam.status)}
+              </div>
+              <CardDescription>{exam.description}</CardDescription>
             </div>
-            <CardDescription>{exam.description}</CardDescription>
-          </div>
-          <div className="flex space-x-2">
-            {exam.status === ExamStatus.DRAFT && (
-              <>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to={`/instructor/exams/${exam.id}/edit`}>
-                    <Edit size={16} />
-                  </Link>
+            <div className="flex space-x-2">
+              {exam.status === ExamStatus.DRAFT && (
+                <>
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link to={`/instructor/exams/${exam.id}/edit`}>
+                      <Edit size={16} />
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handlePublishExam(exam.id)}>
+                    <FileText size={16} />
+                  </Button>
+                </>
+              )}
+              {exam.status === ExamStatus.PUBLISHED && (
+                <Button variant="ghost" size="icon" onClick={() => handleArchiveExam(exam.id)}>
+                  <Archive size={16} />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => handlePublishExam(exam.id)}>
-                  <FileText size={16} />
+              )}
+              {exam.status === ExamStatus.DRAFT && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => handleDeleteExam(exam.id)}
+                >
+                  <Trash2 size={16} />
                 </Button>
-              </>
-            )}
-            {exam.status === ExamStatus.PUBLISHED && (
-              <Button variant="ghost" size="icon" onClick={() => handleArchiveExam(exam.id)}>
-                <Archive size={16} />
-              </Button>
-            )}
-            {exam.status === ExamStatus.DRAFT && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => handleDeleteExam(exam.id)}
-              >
-                <Trash2 size={16} />
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <div className="flex flex-wrap gap-6 text-sm text-gray-500">
-          <div className="flex items-center gap-1">
-            <Clock size={14} />
-            <span>{exam.timeLimit} minutes</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <FileText size={14} />
-            <span>{exam.questions.length} questions</span>
-          </div>
-          {exam.startDate && (
-            <div>
-              <span className="font-medium">Starts:</span> {formatDate(exam.startDate)}
+              )}
             </div>
-          )}
-          {exam.endDate && (
-            <div>
-              <span className="font-medium">Ends:</span> {formatDate(exam.endDate)}
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <div className="flex flex-wrap gap-6 text-sm text-gray-500">
+            <div className="flex items-center gap-1">
+              <Clock size={14} />
+              <span>{exam.timeLimit} minutes</span>
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+            <div className="flex items-center gap-1">
+              <FileText size={14} />
+              <span>{examQuestionCount} questions</span>
+            </div>
+            {exam.startDate && (
+              <div className="flex items-center gap-1">
+                <Calendar size={14} />
+                <span>
+                  {formatDate(exam.startDate)}
+                  {exam.endDate && ` - ${formatDate(exam.endDate)}`}
+                </span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-4">

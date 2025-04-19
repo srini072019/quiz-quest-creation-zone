@@ -16,7 +16,15 @@ export const useExamCandidates = (examId: string) => {
         .select('*');
 
       if (error) throw error;
-      setCandidates(data || []);
+      
+      // Transform the data to match the ExamCandidate type
+      const formattedCandidates: ExamCandidate[] = data.map(candidate => ({
+        id: candidate.id || '',
+        email: candidate.email || '',
+        displayName: candidate.display_name || null
+      }));
+      
+      setCandidates(formattedCandidates);
     } catch (error) {
       console.error('Error fetching candidates:', error);
       toast.error('Failed to load eligible candidates');

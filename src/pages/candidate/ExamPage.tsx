@@ -13,13 +13,14 @@ import { toast } from "sonner";
 import { ExamResult, ExamSession } from "@/types/exam-session.types";
 import { Question } from "@/types/question.types";
 import { Exam } from "@/types/exam.types";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock, FileText } from "lucide-react";
+import { format } from "date-fns";
 
 const ExamPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { authState } = useAuth();
-  const { getExam } = useExams();
+  const { getExamWithQuestions } = useExams();
   const { questions } = useQuestions();
   const { 
     startExam, 
@@ -40,7 +41,8 @@ const ExamPage = () => {
       if (!id) return;
       
       try {
-        const examData = getExam(id);
+        const { exam: examData, examQuestions: examQuestionsList } = getExamWithQuestions(id, questions);
+        
         if (!examData) {
           toast.error("Exam not found");
           navigate(-1);
@@ -48,19 +50,7 @@ const ExamPage = () => {
         }
 
         setExam(examData);
-
-        // Get exam questions
-        const examQuestionsList = questions.filter(q => 
-          examData.questions.includes(q.id)
-        );
-
-        // Shuffle questions if the exam requires it
-        let finalQuestions = [...examQuestionsList];
-        if (examData.shuffleQuestions) {
-          finalQuestions = finalQuestions.sort(() => Math.random() - 0.5);
-        }
-        
-        setExamQuestions(finalQuestions);
+        setExamQuestions(examQuestionsList);
       } catch (error) {
         console.error("Error loading exam:", error);
         toast.error("Failed to load exam");
@@ -70,7 +60,7 @@ const ExamPage = () => {
     };
 
     loadExam();
-  }, [id, getExam, questions, navigate]);
+  }, [id, getExamWithQuestions, questions, navigate]);
 
   const handleStartExam = async () => {
     if (!exam || !authState.user) return;
@@ -162,22 +152,38 @@ const ExamPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <p className="text-sm text-gray-500">Time Limit</p>
-                <p>{exam?.timeLimit} minutes</p>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                  <p>{exam?.timeLimit} minutes</p>
+                </div>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Questions</p>
-                <p>{examQuestions.length}</p>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-500" />
+                  <p>{examQuestions.length}</p>
+                </div>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Passing Score</p>
                 <p>{exam?.passingScore}%</p>
               </div>
+              {exam?.startDate && (
+                <div>
+                  <p className="text-sm text-gray-500">Available</p>
+                  <p>
+                    {format(new Date(exam.startDate), "MMM dd, yyyy")}
+                    {exam.endDate && ` - ${format(new Date(exam.endDate), "MMM dd, yyyy")}`}
+                  </p>
+                </div>
+              )}
             </div>
             <div className="border-t pt-4 mt-4">
               <h3 className="font-medium mb-2">Instructions</h3>
               <ul className="list-disc pl-5 space-y-1 text-sm">
                 <li>You have {exam?.timeLimit} minutes to complete the exam.</li>
                 <li>You must score at least {exam?.passingScore}% to pass.</li>
+                <li>The exam consists of {examQuestions.length} questions.</li>
                 <li>Read each question carefully before answering.</li>
                 <li>You can navigate between questions during the exam.</li>
                 <li>You can only submit the exam once.</li>
