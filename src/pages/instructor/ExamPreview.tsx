@@ -18,6 +18,9 @@ const ExamPreview = () => {
     questions
   );
 
+  console.log("ExamPreview - exam:", exam);
+  console.log("ExamPreview - examQuestions:", examQuestions);
+
   if (isLoading) {
     return (
       <InstructorLayout>

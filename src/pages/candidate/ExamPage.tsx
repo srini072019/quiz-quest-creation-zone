@@ -53,6 +53,7 @@ const ExamPage = ({ isPreview = false, previewExamId, previewExam, previewExamQu
   const [examSession, setExamSession] = useState<ExamSession | null>(null);
   const [examResult, setExamResult] = useState<ExamResult | null>(null);
 
+  // Only check auth if not in preview mode
   useEffect(() => {
     if (!isPreview && !authState.isLoading && !authState.isAuthenticated) {
       toast.error("You must be logged in to access this page");
@@ -211,7 +212,21 @@ const ExamPage = ({ isPreview = false, previewExamId, previewExam, previewExamQu
 
   // Exit early if we don't have an exam in preview mode
   if (isPreview && !exam) {
-    return null;
+    console.error("No exam data available for preview");
+    return (
+      <CandidateLayout>
+        <div className="container mx-auto py-6">
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <p className="text-center text-red-500">Error: No exam data available for preview</p>
+            <div className="mt-6 flex justify-center">
+              <Button onClick={() => navigate("/instructor/exams")}>
+                Back to Exams
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CandidateLayout>
+    );
   }
 
   // If no exam session yet, show the exam info screen

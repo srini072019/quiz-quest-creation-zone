@@ -35,11 +35,13 @@ export const useExam = (
         const { exam: examData, examQuestions: examQuestionsList } = getExamWithQuestions(examId, questions);
         
         if (!examData) {
+          console.error(`Exam not found with ID: ${examId}`);
           setError("Exam not found");
           toast.error("Exam not found");
           return;
         }
 
+        console.log(`Loaded exam: ${examData.title} with ${examQuestionsList.length} questions`);
         setExam(examData);
         setExamQuestions(examQuestionsList);
         setError(null);
