@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuestions } from "@/hooks/useQuestions";
-import { useExams } from "@/hooks/useExams";
+import { useExams, useExam } from "@/hooks/useExams";
 import { useExamSession } from "@/hooks/useExamSession";
 import { useAuth } from "@/context/AuthContext";
 import ExamTaking from "@/components/exam/ExamTaking";
@@ -34,39 +33,15 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     getExamSession 
   } = useExamSession();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [exam, setExam] = useState<Exam | null>(null);
-  const [examQuestions, setExamQuestions] = useState<Question[]>([]);
+  const { exam, examQuestions, isLoading, error } = useExam(
+    examId,
+    getExamWithQuestions,
+    questions
+  );
+
   const [examSession, setExamSession] = useState<ExamSession | null>(null);
   const [examResult, setExamResult] = useState<ExamResult | null>(null);
 
-  useEffect(() => {
-    const loadExam = async () => {
-      if (!examId) return;
-      
-      try {
-        const { exam: examData, examQuestions: examQuestionsList } = getExamWithQuestions(examId, questions);
-        
-        if (!examData) {
-          toast.error("Exam not found");
-          navigate(-1);
-          return;
-        }
-
-        setExam(examData);
-        setExamQuestions(examQuestionsList);
-      } catch (error) {
-        console.error("Error loading exam:", error);
-        toast.error("Failed to load exam");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadExam();
-  }, [examId, getExamWithQuestions, questions, navigate]);
-
-  // Check authentication if not in preview mode
   useEffect(() => {
     if (!isPreview && !authState.isLoading && !authState.isAuthenticated) {
       toast.error("You must be logged in to access this page");
@@ -77,9 +52,7 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
   const handleStartExam = async () => {
     if (!exam) return;
 
-    // For preview mode, we don't need to check auth
     if (isPreview) {
-      // For preview mode, create a mock session without saving to database
       const mockSession: ExamSession = {
         id: 'preview',
         examId: exam.id,
@@ -94,7 +67,6 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
       return;
     }
 
-    // For regular mode, check auth
     if (!authState.user) {
       toast.error("You must be logged in to take an exam");
       navigate("/login", { state: { from: `/candidate/exams/${examId}` } });
@@ -121,7 +93,6 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     if (!examSession) return false;
     
     if (isPreview) {
-      // For preview mode, just update the local state
       setExamSession(prev => {
         if (!prev) return prev;
         const answers = [...prev.answers];
@@ -145,14 +116,12 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     if (!examSession) return false;
     
     if (isPreview) {
-      // For preview mode, just update the local state
       setExamSession(prev => prev ? { ...prev, currentQuestionIndex: newIndex } : null);
       return true;
     }
     
     const success = await navigateQuestion(examSession.id, newIndex);
     if (success) {
-      // Update the session in state
       const updatedSession = getExamSession(examSession.id);
       if (updatedSession) {
         setExamSession(updatedSession);
@@ -165,7 +134,6 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     if (!examSession || !exam) return;
     
     if (isPreview) {
-      // For preview mode, just show a message and return to the exam list
       toast.success("Preview completed");
       navigate("/instructor/exams");
       return;
@@ -188,6 +156,24 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
       <CandidateLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </CandidateLayout>
+    );
+  }
+
+  if (error || !exam) {
+    return (
+      <CandidateLayout>
+        <div className="container mx-auto py-6">
+          <h1 className="text-2xl font-bold mb-6">Exam Not Found</h1>
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <p className="text-center text-red-500">Error: {error || "Exam not found"}</p>
+            <div className="mt-6 flex justify-center">
+              <Button onClick={() => navigate("/candidate/exams")}>
+                Back to Exams
+              </Button>
+            </div>
+          </div>
         </div>
       </CandidateLayout>
     );
