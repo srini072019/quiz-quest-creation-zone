@@ -3,91 +3,47 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { Course } from "@/types/course.types";
 
 export const useEnrollment = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { authState } = useAuth();
 
-  const enrollInCourse = async (courseId: string, userId: string): Promise<boolean> => {
-    if (!authState.user) {
-      toast.error("You must be logged in to enroll in courses");
-      return false;
-    }
-
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('course_enrollments')
-        .insert({
-          course_id: courseId,
-          user_id: userId,
-          enrolled_by: authState.user.id
-        });
-
-      if (error) throw error;
-      
-      toast.success("User enrolled in course successfully");
-      return true;
-    } catch (error) {
-      console.error("Error enrolling in course:", error);
-      toast.error("Failed to enroll user in course");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const unenrollFromCourse = async (courseId: string, userId: string): Promise<boolean> => {
-    if (!authState.user) {
-      toast.error("You must be logged in to manage enrollments");
-      return false;
-    }
-
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('course_enrollments')
-        .delete()
-        .eq('course_id', courseId)
-        .eq('user_id', userId);
-
-      if (error) throw error;
-      
-      toast.success("User unenrolled from course successfully");
-      return true;
-    } catch (error) {
-      console.error("Error unenrolling from course:", error);
-      toast.error("Failed to unenroll user from course");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getEnrolledCourses = async () => {
+  const getEnrolledCourses = async (): Promise<Course[]> => {
     if (!authState.user) return [];
     
     try {
       const { data, error } = await supabase
         .from('course_enrollments')
         .select(`
-          course_id,
-          courses:course_id (
+          course:course_id (
             id,
             title,
             description,
+            image_url,
             instructor_id,
             is_published,
             created_at,
-            updated_at,
-            image_url
+            updated_at
           )
         `)
         .eq('user_id', authState.user.id);
 
       if (error) throw error;
 
-      return data.map(enrollment => enrollment.courses);
+      // Transform the data to match the Course type
+      const courses: Course[] = data.map(({ course }) => ({
+        id: course.id,
+        title: course.title,
+        description: course.description || "",
+        imageUrl: course.image_url,
+        instructorId: course.instructor_id,
+        isPublished: course.is_published,
+        createdAt: new Date(course.created_at),
+        updatedAt: new Date(course.updated_at)
+      }));
+
+      return courses;
     } catch (error) {
       console.error("Error fetching enrolled courses:", error);
       toast.error("Failed to fetch enrolled courses");
@@ -95,37 +51,54 @@ export const useEnrollment = () => {
     }
   };
 
-  const getCourseParticipants = async (courseId: string) => {
+  const enrollParticipants = async (courseId: string, emails: string[]): Promise<boolean> => {
+    if (!authState.user) {
+      toast.error("You must be logged in to enroll participants");
+      return false;
+    }
+
+    setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // First, get user IDs for the provided emails
+      const { data: users, error: userError } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('email', emails);
+
+      if (userError) throw userError;
+
+      if (!users.length) {
+        toast.error("No valid users found for the provided emails");
+        return false;
+      }
+
+      // Create enrollment records for each user
+      const enrollments = users.map(user => ({
+        course_id: courseId,
+        user_id: user.id,
+        enrolled_by: authState.user!.id
+      }));
+
+      const { error } = await supabase
         .from('course_enrollments')
-        .select(`
-          user_id,
-          enrolled_at,
-          enrolled_by,
-          profiles:user_id (
-            display_name,
-            avatar_url,
-            role
-          )
-        `)
-        .eq('course_id', courseId);
+        .insert(enrollments);
 
       if (error) throw error;
-
-      return data;
+      
+      toast.success("Participants enrolled successfully");
+      return true;
     } catch (error) {
-      console.error("Error fetching course participants:", error);
-      toast.error("Failed to fetch course participants");
-      return [];
+      console.error("Error enrolling participants:", error);
+      toast.error("Failed to enroll participants");
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return {
     isLoading,
-    enrollInCourse,
-    unenrollFromCourse,
     getEnrolledCourses,
-    getCourseParticipants,
+    enrollParticipants
   };
 };

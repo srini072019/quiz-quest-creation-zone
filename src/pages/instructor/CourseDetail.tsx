@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import InstructorLayout from "@/layouts/InstructorLayout";
@@ -16,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ROUTES } from "@/constants/routes";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
+import ParticipantEnrollment from "@/components/course/ParticipantEnrollment";
 
 const CourseDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,14 +26,14 @@ const CourseDetail = () => {
   const [course, setCourse] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [isEnrollDialogOpen, setIsEnrollDialogOpen] = useState(false);
+
   useEffect(() => {
     if (id) {
       const foundCourse = getCourse(id);
       if (foundCourse) {
         setCourse(foundCourse);
       } else {
-        // Course not found, redirect
         navigate(ROUTES.INSTRUCTOR_COURSES);
       }
     }
@@ -47,7 +47,6 @@ const CourseDetail = () => {
       
       if (success) {
         setIsEditDialogOpen(false);
-        // Update the local state with the new course data
         setCourse({ ...course, ...data });
       }
     }
@@ -60,7 +59,6 @@ const CourseDetail = () => {
       setIsSubmitting(false);
       
       if (success) {
-        // Update the local state with the new published status
         setCourse({ ...course, isPublished: false });
       }
     }
@@ -122,6 +120,12 @@ const CourseDetail = () => {
                 Unpublish
               </Button>
             )}
+            <Button 
+              variant="default"
+              onClick={() => setIsEnrollDialogOpen(true)}
+            >
+              Add Participants
+            </Button>
           </div>
         </div>
 
@@ -145,7 +149,6 @@ const CourseDetail = () => {
         </Card>
       </div>
       
-      {/* Edit Course Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -166,6 +169,12 @@ const CourseDetail = () => {
           />
         </DialogContent>
       </Dialog>
+
+      <ParticipantEnrollment
+        courseId={course.id}
+        isOpen={isEnrollDialogOpen}
+        onClose={() => setIsEnrollDialogOpen(false)}
+      />
     </InstructorLayout>
   );
 };

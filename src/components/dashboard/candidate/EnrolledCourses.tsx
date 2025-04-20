@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -53,7 +52,7 @@ const EnrolledCourses = () => {
           <EnrolledCourse
             key={course.id}
             title={course.title}
-            instructor={course.instructor?.displayName || "Unknown Instructor"}
+            instructor="Not Available"
             progress={0}
           />
         ))}
