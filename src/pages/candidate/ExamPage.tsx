@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuestions } from "@/hooks/useQuestions";
@@ -17,9 +18,12 @@ import { format } from "date-fns";
 
 interface ExamPageProps {
   isPreview?: boolean;
+  previewExamId?: string;
+  previewExam?: Exam;
+  previewExamQuestions?: Question[];
 }
 
-const ExamPage = ({ isPreview = false }: ExamPageProps) => {
+const ExamPage = ({ isPreview = false, previewExamId, previewExam, previewExamQuestions }: ExamPageProps) => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
   const { authState } = useAuth();
@@ -33,11 +37,18 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     getExamSession 
   } = useExamSession();
 
-  const { exam, examQuestions, isLoading, error } = useExam(
-    examId,
+  // Use preview data if in preview mode, otherwise fetch from API
+  const actualExamId = isPreview ? previewExamId : examId;
+  
+  const { exam: fetchedExam, examQuestions: fetchedExamQuestions, isLoading, error } = useExam(
+    isPreview ? undefined : examId,
     getExamWithQuestions,
     questions
   );
+
+  // Use preview data or fetched data
+  const exam = isPreview ? previewExam : fetchedExam;
+  const examQuestions = isPreview ? previewExamQuestions || [] : fetchedExamQuestions;
 
   const [examSession, setExamSession] = useState<ExamSession | null>(null);
   const [examResult, setExamResult] = useState<ExamResult | null>(null);
@@ -151,7 +162,8 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     }
   };
 
-  if (isLoading) {
+  // In preview mode, skip loading state and just render a placeholder if no data yet
+  if (!isPreview && isLoading) {
     return (
       <CandidateLayout>
         <div className="flex items-center justify-center h-64">
@@ -161,7 +173,8 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     );
   }
 
-  if (error || !exam) {
+  // Only show error in non-preview mode
+  if (!isPreview && (error || !exam)) {
     return (
       <CandidateLayout>
         <div className="container mx-auto py-6">
@@ -179,6 +192,7 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     );
   }
 
+  // If we have results, show them
   if (examResult) {
     return (
       <CandidateLayout>
@@ -195,6 +209,12 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     );
   }
 
+  // Exit early if we don't have an exam in preview mode
+  if (isPreview && !exam) {
+    return null;
+  }
+
+  // If no exam session yet, show the exam info screen
   if (!examSession) {
     return (
       <CandidateLayout>
@@ -253,6 +273,7 @@ const ExamPage = ({ isPreview = false }: ExamPageProps) => {
     );
   }
 
+  // Finally render the exam taking component
   return (
     <CandidateLayout>
       <ExamTaking

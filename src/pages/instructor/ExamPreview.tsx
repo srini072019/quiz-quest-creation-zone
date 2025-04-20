@@ -67,8 +67,13 @@ const ExamPreview = () => {
           </p>
         </div>
         
-        {/* Use the same ExamPage component that candidates use, but with isPreview=true */}
-        <ExamPage isPreview={true} />
+        {/* Pass the necessary props to ExamPage */}
+        <ExamPage 
+          isPreview={true} 
+          previewExamId={exam.id}
+          previewExam={exam}
+          previewExamQuestions={examQuestions}
+        />
       </div>
     </InstructorLayout>
   );

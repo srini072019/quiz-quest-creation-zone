@@ -24,7 +24,8 @@ export const useExam = (
   useEffect(() => {
     const loadExam = async () => {
       if (!examId) {
-        setError("No exam ID provided");
+        // If no examId is provided, don't try to load anything
+        // This is useful for preview mode where we pass data directly
         setIsLoading(false);
         return;
       }
